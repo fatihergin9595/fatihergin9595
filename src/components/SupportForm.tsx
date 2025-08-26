@@ -408,3 +408,17 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     </div>
   );
 }
+import { checkMembership } from './services/membership';
+
+// ...
+const onSubmit = async () => {
+  // Kullanıcıdan gelen değerler:
+  // username -> login
+  // phone -> "90XXXXXXXXXX" (12 hane, sadece rakam)
+  const res = await checkMembership(username, phone90);
+  if (res.status === 'match') {
+    // sonraki aşamaya geç
+  } else {
+    // res.message'ı kullanıcıya göster
+  }
+};
