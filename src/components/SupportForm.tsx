@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Mail, User, Phone, FileText, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Mail, User, Phone, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { checkMembership } from '../services/membership';
 
 interface SupportFormProps {
   onBack: () => void;
@@ -7,75 +8,48 @@ interface SupportFormProps {
 
 interface FormData {
   username: string;
-  countryCode: string;
-  phoneNumber: string;
+  phoneNumber: string; // 5XXXXXXXXX (10 hane, sadece rakam)
   email: string;
   fullName: string;
 }
 
 interface FormErrors {
   username?: string;
-  countryCode?: string;
   phoneNumber?: string;
   email?: string;
   fullName?: string;
 }
 
+type Feedback =
+  | { type: 'success'; message: string }
+  | { type: 'warning' | 'error'; message: string };
+
 export default function SupportForm({ onBack }: SupportFormProps) {
   const [formData, setFormData] = useState<FormData>({
     username: '',
-    countryCode: '+90',
     phoneNumber: '',
     email: '',
-    fullName: ''
+    fullName: '',
   });
-  
+
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
 
-  const countries = [
-    { code: '+90', name: 'Türkiye', flag: '🇹🇷' },
-    { code: '+1', name: 'ABD', flag: '🇺🇸' },
-    { code: '+44', name: 'İngiltere', flag: '🇬🇧' },
-    { code: '+49', name: 'Almanya', flag: '🇩🇪' },
-    { code: '+33', name: 'Fransa', flag: '🇫🇷' },
-    { code: '+39', name: 'İtalya', flag: '🇮🇹' },
-    { code: '+34', name: 'İspanya', flag: '🇪🇸' },
-    { code: '+31', name: 'Hollanda', flag: '🇳🇱' },
-    { code: '+32', name: 'Belçika', flag: '🇧🇪' },
-    { code: '+41', name: 'İsviçre', flag: '🇨🇭' },
-    { code: '+43', name: 'Avusturya', flag: '🇦🇹' },
-    { code: '+45', name: 'Danimarka', flag: '🇩🇰' },
-    { code: '+46', name: 'İsveç', flag: '🇸🇪' },
-    { code: '+47', name: 'Norveç', flag: '🇳🇴' },
-    { code: '+358', name: 'Finlandiya', flag: '🇫🇮' },
-    { code: '+7', name: 'Rusya', flag: '🇷🇺' },
-    { code: '+86', name: 'Çin', flag: '🇨🇳' },
-    { code: '+81', name: 'Japonya', flag: '🇯🇵' },
-    { code: '+82', name: 'Güney Kore', flag: '🇰🇷' },
-    { code: '+91', name: 'Hindistan', flag: '🇮🇳' },
-    { code: '+61', name: 'Avustralya', flag: '🇦🇺' },
-    { code: '+55', name: 'Brezilya', flag: '🇧🇷' },
-    { code: '+52', name: 'Meksika', flag: '🇲🇽' },
-    { code: '+54', name: 'Arjantin', flag: '🇦🇷' },
-    { code: '+56', name: 'Şili', flag: '🇨🇱' },
-    { code: '+27', name: 'Güney Afrika', flag: '🇿🇦' },
-    { code: '+20', name: 'Mısır', flag: '🇪🇬' },
-    { code: '+971', name: 'BAE', flag: '🇦🇪' },
-    { code: '+966', name: 'Suudi Arabistan', flag: '🇸🇦' },
-    { code: '+98', name: 'İran', flag: '🇮🇷' },
-    { code: '+92', name: 'Pakistan', flag: '🇵🇰' },
-    { code: '+880', name: 'Bangladeş', flag: '🇧🇩' },
-    { code: '+60', name: 'Malezya', flag: '🇲🇾' },
-    { code: '+65', name: 'Singapur', flag: '🇸🇬' },
-    { code: '+66', name: 'Tayland', flag: '🇹🇭' },
-    { code: '+84', name: 'Vietnam', flag: '🇻🇳' },
-    { code: '+62', name: 'Endonezya', flag: '🇮🇩' },
-    { code: '+63', name: 'Filipinler', flag: '🇵🇭' }
-  ];
+  // ————— Helpers —————
+  const onlyDigits = (v: string) => v.replace(/\D/g, '');
 
+  // TR normalize → "90XXXXXXXXXX"
+  const toPhone90 = (raw: string): string | null => {
+    const digits = onlyDigits(raw);
+    if (digits.length === 12 && digits.startsWith('90')) return digits;
+    if (digits.length === 11 && digits.startsWith('0')) return '90' + digits.slice(1);
+    if (digits.length === 10 && digits.startsWith('5')) return '90' + digits;
+    return null;
+  };
+
+  // ————— Validation —————
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -83,10 +57,11 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       newErrors.username = 'Kullanıcı adı gereklidir';
     }
 
-    if (!formData.phoneNumber.trim()) {
+    const tel = onlyDigits(formData.phoneNumber);
+    if (!tel) {
       newErrors.phoneNumber = 'Telefon numarası gereklidir';
-    } else if (!/^\d{7,15}$/.test(formData.phoneNumber.replace(/\s/g, ''))) {
-      newErrors.phoneNumber = 'Geçerli bir telefon numarası girin (7-15 haneli)';
+    } else if (!/^5\d{9}$/.test(tel)) {
+      newErrors.phoneNumber = 'Geçerli bir telefon girin (5 ile başlayan 10 hane)';
     }
 
     if (!formData.email.trim()) {
@@ -103,69 +78,66 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ————— Handlers —————
   const handleInputChange = (field: keyof FormData, value: string) => {
-    // For phone number, only allow digits
     if (field === 'phoneNumber') {
-      value = value.replace(/\D/g, '');
+      value = onlyDigits(value).slice(0, 10); // 10 haneyle sınırla
     }
-    
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
+    if (feedback) setFeedback(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
+    setFeedback(null);
+
+    if (!validateForm()) return;
+
+    const phone90 = toPhone90(formData.phoneNumber);
+    if (!phone90) {
+      setErrors(prev => ({ ...prev, phoneNumber: 'Telefon formatı hatalı (5XXXXXXXXX)' }));
       return;
     }
 
     setIsSubmitting(true);
-    
-    // Simulate form submission
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setIsSubmitted(true);
-      
-      // Show success notification
-      const notification = document.createElement('div');
-      notification.innerHTML = `
-        <div style="position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1000; display: flex; align-items: center; gap: 8px; font-family: Arial, sans-serif;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22,4 12,14.01 9,11.01"></polyline>
-          </svg>
-          <span>Talep başarıyla gönderildi! En kısa sürede dönüş yapılacaktır.</span>
-        </div>
-      `;
-      document.body.appendChild(notification);
-      
-      // Remove notification after 5 seconds
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.parentNode.removeChild(notification);
-        }
-      }, 5000);
-      
-    } catch (error) {
-      console.error('Form submission error:', error);
+      const res = await checkMembership(formData.username.trim(), phone90);
+
+      if (res.status === 'match') {
+        setIsSubmitted(true);
+        return;
+      }
+
+      const msgMap: Record<string, string> = {
+        not_found: 'Bu kullanıcı adına ait hesap bulunamadı.',
+        ambiguous: 'Birden fazla kayıt bulundu, lütfen kullanıcı adını netleştirin.',
+        mismatch: 'Kullanıcı adı ile telefon numarası eşleşmedi.',
+        error: 'İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.'
+      };
+      const msg = (res as any).message || msgMap[res.status] || msgMap.error;
+
+      setFeedback({
+        type: res.status === 'error' ? 'error' : 'warning',
+        message: msg,
+      });
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err?.message || 'Beklenmeyen bir hata oluştu.' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ————— Success Screen —————
   if (isSubmitted) {
     return (
       <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
         <div className="max-w-2xl mx-auto">
           {/* Logo */}
           <div className="mb-8">
-            <img 
-              src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1" 
-              alt="Logo" 
+            <img
+              src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1"
+              alt="Logo"
               className="w-full max-w-md mx-auto block"
               style={{ maxHeight: '120px', objectFit: 'contain' }}
             />
@@ -176,7 +148,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
               <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
               <h1 className="text-2xl sm:text-3xl font-bold mb-4">Talebiniz Alındı!</h1>
               <p className="text-gray-300 text-sm sm:text-base mb-6">
-                Destek talebiniz başarıyla gönderildi. En kısa sürede size dönüş yapacağız.
+                Üyelik doğrulaması başarıyla tamamlandı. Devam etmek için yönlendirmeleri takip edin.
               </p>
             </div>
 
@@ -189,7 +161,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Telefon:</span>
-                  <span>{formData.countryCode} {formData.phoneNumber}</span>
+                  <span>+90 {onlyDigits(formData.phoneNumber)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Email:</span>
@@ -216,14 +188,15 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     );
   }
 
+  // ————— Form Screen —————
   return (
     <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
         {/* Logo */}
         <div className="mb-8">
-          <img 
-            src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1" 
-            alt="Logo" 
+          <img
+            src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1"
+            alt="Logo"
             className="w-full max-w-md mx-auto block"
             style={{ maxHeight: '120px', objectFit: 'contain' }}
           />
@@ -272,47 +245,18 @@ export default function SupportForm({ onBack }: SupportFormProps) {
               )}
             </div>
 
-            {/* Phone Number */}
+            {/* Phone Number (+90 sabit) */}
             <div>
               <label className="block text-sm font-medium mb-2 flex items-center gap-2">
                 <Phone className="w-4 h-4" />
                 Telefon Numarası *
               </label>
               <div className="flex">
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                    className={`px-4 py-3 rounded-l-lg bg-white/10 border ${
-                      errors.phoneNumber ? 'border-red-500' : 'border-white/20'
-                    } border-r-0 text-white focus:outline-none focus:ring-2 focus:ring-white/30 transition-colors flex items-center gap-2 min-w-[120px]`}
-                  >
-                    <span>{countries.find(c => c.code === formData.countryCode)?.flag}</span>
-                    <span>{formData.countryCode}</span>
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                  
-                  {showCountryDropdown && (
-                    <div className="absolute top-full left-0 right-0 z-50 bg-gray-800 border border-white/20 rounded-lg mt-1 max-h-60 overflow-y-auto">
-                      {countries.map((country) => (
-                        <button
-                          key={country.code}
-                          type="button"
-                          onClick={() => {
-                            setFormData(prev => ({ ...prev, countryCode: country.code }));
-                            setShowCountryDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left hover:bg-white/10 flex items-center gap-3 text-white text-sm"
-                        >
-                          <span>{country.flag}</span>
-                          <span>{country.code}</span>
-                          <span>{country.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                <div className="px-4 py-3 rounded-l-lg bg-white/10 border border-white/20 border-r-0 text-white min-w-[120px] flex items-center gap-2">
+                  <span>🇹🇷</span>
+                  <span>+90</span>
                 </div>
-                
+
                 <input
                   type="tel"
                   value={formData.phoneNumber}
@@ -377,6 +321,22 @@ export default function SupportForm({ onBack }: SupportFormProps) {
               )}
             </div>
 
+            {/* Server Feedback */}
+            {feedback && (
+              <div
+                className={`flex items-start gap-2 p-3 rounded-lg border ${
+                  feedback.type === 'success'
+                    ? 'bg-green-500/20 border-green-500/30 text-green-100'
+                    : feedback.type === 'warning'
+                    ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-100'
+                    : 'bg-red-500/20 border-red-500/30 text-red-100'
+                }`}
+              >
+                <AlertCircle className="w-5 h-5 mt-0.5" />
+                <p className="text-sm">{feedback.message}</p>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -387,12 +347,12 @@ export default function SupportForm({ onBack }: SupportFormProps) {
               {isSubmitting ? (
                 <>
                   <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                  Gönderiliyor...
+                  Kontrol ediliyor...
                 </>
               ) : (
                 <>
                   <Mail className="w-5 h-5" />
-                  Talep Gönder
+                  Üyeliğimi Kontrol Et
                 </>
               )}
             </button>
@@ -400,7 +360,8 @@ export default function SupportForm({ onBack }: SupportFormProps) {
 
           <div className="mt-6 p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
             <p className="text-blue-100 text-sm">
-              <strong>Not:</strong> Tüm alanlar zorunludur. Talebiniz 24 saat içinde değerlendirilecektir.
+              <strong>Not:</strong> Telefon numarasını <strong>5 ile başlayan 10 hane</strong> olarak girin. Sistem, karşılaştırmayı
+              <strong> 90XXXXXXXXXX</strong> formatında yapar.
             </p>
           </div>
         </div>
@@ -408,17 +369,3 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     </div>
   );
 }
-import { checkMembership } from './services/membership';
-
-// ...
-const onSubmit = async () => {
-  // Kullanıcıdan gelen değerler:
-  // username -> login
-  // phone -> "90XXXXXXXXXX" (12 hane, sadece rakam)
-  const res = await checkMembership(username, phone90);
-  if (res.status === 'match') {
-    // sonraki aşamaya geç
-  } else {
-    // res.message'ı kullanıcıya göster
-  }
-};
