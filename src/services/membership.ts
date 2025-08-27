@@ -11,12 +11,18 @@ export async function checkMembership(login: string, phone90: string): Promise<M
   });
 
   const text = await resp.text();
-  let json: any = {};
-  try { json = text ? JSON.parse(text) : {}; } catch { /* noop */ }
+  let json: any = null;
+  try { json = text ? JSON.parse(text) : null; } catch { /* noop */ }
 
   if (!resp.ok) {
-    return { status: 'error', message: `Sunucu hatası: ${resp.status} ${text?.slice?.(0, 200) ?? ''}` };
+    return { status: 'error', message: json?.message || `HTTP ${resp.status}: ${text?.slice?.(0, 200) ?? ''}` };
+  }
+
+  // YALNIZCA beklenen status değerlerini kabul et
+  const okStatuses = new Set(['match','mismatch','not_found','ambiguous','error']);
+  const s = json?.status;
+  if (typeof s !== 'string' || !okStatuses.has(s)) {
+    return { status: 'error', message: 'Beklenmeyen yanıt.' };
   }
   return json as MembershipResult;
 }
-    
