@@ -3,9 +3,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Mail, User, Phone, CheckCircle, AlertCircle } from 'lucide-react';
 import { checkMembership } from '../services/membership';
 
-interface SupportFormProps {
-  onBack: () => void;
-}
+interface SupportFormProps { onBack: () => void; }
 
 interface FormData {
   username: string;      // kullanıcı adı
@@ -23,20 +21,18 @@ type Feedback =
 
 export default function SupportForm({ onBack }: SupportFormProps) {
   const [formData, setFormData] = useState<FormData>({ username: '', phoneNumber: '' });
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors]   = useState<FormErrors>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitted,  setIsSubmitted]  = useState(false);
 
   // ---- Helpers ----
   const onlyDigits = (v: string) => v.replace(/\D/g, '');
-
-  // TR normalize → "90XXXXXXXXXX"
   const toPhone90 = (raw: string): string | null => {
     const digits = onlyDigits(raw);
     if (digits.length === 12 && digits.startsWith('90')) return digits;
-    if (digits.length === 11 && digits.startsWith('0')) return '90' + digits.slice(1);
-    if (digits.length === 10 && digits.startsWith('5')) return '90' + digits;
+    if (digits.length === 11 && digits.startsWith('0'))  return '90' + digits.slice(1);
+    if (digits.length === 10 && digits.startsWith('5'))  return '90' + digits;
     return null;
   };
 
@@ -53,19 +49,15 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ---- Handlers ----
-  const handleInputChange = (field: keyof FormData, value: string) => {
-    if (field === 'phoneNumber') value = onlyDigits(value).slice(0, 10); // 10 haneye sınırla
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
-    if (feedback) setFeedback(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ---- Submit ----
+  const doSubmit = async () => {
     setFeedback(null);
+    console.log('[form] submit start', formData);
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log('[form] validation failed');
+      return;
+    }
 
     const phone90 = toPhone90(formData.phoneNumber);
     if (!phone90) {
@@ -75,7 +67,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
 
     setIsSubmitting(true);
     try {
-      console.log('[form] posting to function with', { login: formData.username.trim(), phone90 });
+      console.log('[form] posting to function...', { login: formData.username.trim(), phone90 });
       const res = await checkMembership(formData.username.trim(), phone90);
       console.log('[form] function response:', res);
 
@@ -90,10 +82,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
         mismatch: 'Kullanıcı adı ile telefon numarası eşleşmedi.',
         error: 'İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.',
       };
-      setFeedback({
-        type: res.status === 'error' ? 'error' : 'warning',
-        message: (res as any).message || msgMap[res.status] || msgMap.error,
-      });
+      setFeedback({ type: res.status === 'error' ? 'error' : 'warning', message: (res as any).message || msgMap[res.status] || msgMap.error });
     } catch (err: any) {
       setFeedback({ type: 'error', message: err?.message || 'Beklenmeyen bir hata oluştu.' });
     } finally {
@@ -107,21 +96,16 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
         <div className="max-w-2xl mx-auto">
           <div className="mb-8">
-            <img
-              src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1"
-              alt="Logo"
-              className="w-full max-w-md mx-auto block"
-              style={{ maxHeight: '120px', objectFit: 'contain' }}
-            />
+            <img src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1"
+                 alt="Logo" className="w-full max-w-md mx-auto block"
+                 style={{ maxHeight: '120px', objectFit: 'contain' }} />
           </div>
 
           <div className="text-center">
             <div className="mb-6">
               <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
               <h1 className="text-2xl sm:text-3xl font-bold mb-4">Talebiniz Alındı!</h1>
-              <p className="text-gray-300 text-sm sm:text-base mb-6">
-                Üyelik doğrulaması başarıyla tamamlandı. Devam etmek için yönlendirmeleri takip edin.
-              </p>
+              <p className="text-gray-300 text-sm sm:text-base mb-6">Üyelik doğrulaması başarıyla tamamlandı. Devam etmek için yönlendirmeleri takip edin.</p>
             </div>
 
             <div style={{ backgroundColor: '#0a2332', borderRadius: '10px', padding: '24px' }} className="mb-8">
@@ -132,7 +116,8 @@ export default function SupportForm({ onBack }: SupportFormProps) {
               </div>
             </div>
 
-            <button onClick={onBack} style={{ backgroundColor: '#ffffff', color: '#071d2a', borderRadius: '8px' }} className="inline-flex items-center gap-2 px-6 py-3 font-bold hover:bg-gray-100 transition-colors">
+            <button onClick={onBack} style={{ backgroundColor: '#ffffff', color: '#071d2a', borderRadius: '8px' }}
+                    className="inline-flex items-center gap-2 px-6 py-3 font-bold hover:bg-gray-100 transition-colors">
               <ArrowLeft className="w-5 h-5" /> Ana Sayfaya Dön
             </button>
           </div>
@@ -146,12 +131,9 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
-          <img
-            src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1"
-            alt="Logo"
-            className="w-full max-w-md mx-auto block"
-            style={{ maxHeight: '120px', objectFit: 'contain' }}
-          />
+          <img src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1"
+               alt="Logo" className="w-full max-w-md mx-auto block"
+               style={{ maxHeight: '120px', objectFit: 'contain' }} />
         </div>
 
         <button onClick={onBack} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors mb-6">
@@ -164,7 +146,8 @@ export default function SupportForm({ onBack }: SupportFormProps) {
         </div>
 
         <div style={{ backgroundColor: '#0a2332', borderRadius: '10px', padding: '24px' }} className="mb-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* onSubmit: default submit → preventDefault + doSubmit */}
+          <form onSubmit={(e) => { e.preventDefault(); doSubmit(); }} className="space-y-6">
             {/* Username */}
             <div>
               <label className="block text-sm font-medium mb-2 flex items-center gap-2">
@@ -202,23 +185,22 @@ export default function SupportForm({ onBack }: SupportFormProps) {
 
             {/* Server Feedback */}
             {feedback && (
-              <div
-                className={`flex items-start gap-2 p-3 rounded-lg border ${
-                  feedback.type === 'success'
-                    ? 'bg-green-500/20 border-green-500/30 text-green-100'
-                    : feedback.type === 'warning'
-                    ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-100'
-                    : 'bg-red-500/20 border-red-500/30 text-red-100'
-                }`}
-              >
+              <div className={`flex items-start gap-2 p-3 rounded-lg border ${
+                feedback.type === 'success'
+                  ? 'bg-green-500/20 border-green-500/30 text-green-100'
+                  : feedback.type === 'warning'
+                  ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-100'
+                  : 'bg-red-500/20 border-red-500/30 text-red-100'
+              }`}>
                 <AlertCircle className="w-5 h-5 mt-0.5" />
                 <p className="text-sm">{feedback.message}</p>
               </div>
             )}
 
-            {/* Submit */}
+            {/* Submit (ek olarak onClick de çağırır) */}
             <button
               type="submit"
+              onClick={(e) => { e.preventDefault(); doSubmit(); }}
               disabled={isSubmitting}
               style={{ backgroundColor: '#ffffff', color: '#071d2a', borderRadius: '8px' }}
               className="w-full px-6 py-3 font-bold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
