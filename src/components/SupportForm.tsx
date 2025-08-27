@@ -18,7 +18,7 @@ type Feedback =
   | { type: 'success'; message: string }
   | { type: 'warning' | 'error'; message: string };
 
-// ---- Yardımcılar ----
+// ----- Helpers -----
 const onlyDigits = (v: string) => v.replace(/\D/g, '');
 // TR normalize → "90XXXXXXXXXX"
 const toPhone90 = (raw: string): string | null => {
@@ -29,7 +29,7 @@ const toPhone90 = (raw: string): string | null => {
   return null;
 };
 
-// API çağrısı (inline)
+// Netlify Function çağrısı (inline; harici import yok)
 async function callMembership(login: string, phone90: string) {
   const resp = await fetch('/.netlify/functions/membership-check', {
     method: 'POST',
@@ -52,7 +52,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // ---- Validation ----
+  // ----- Validation -----
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
     if (!formData.username.trim()) newErrors.username = 'Kullanıcı adı gereklidir';
@@ -65,7 +65,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ---- Submit ----
+  // ----- Submit -----
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFeedback(null);
@@ -104,7 +104,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     }
   };
 
-  // ---- Success Screen ----
+  // ----- Success Screen -----
   if (isSubmitted) {
     return (
       <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
@@ -121,7 +121,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
           <div className="text-center">
             <div className="mb-6">
               <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              <h1 className="text-2xl sm:text-3xl font-bold mb-4">Talebiniz Alındı!</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-4">Eşleşme Doğrulandı</h1>
               <p className="text-gray-300 text-sm sm:text-base mb-6">
                 Üyelik doğrulaması başarıyla tamamlandı. Devam etmek için yönlendirmeleri takip edin.
               </p>
@@ -148,7 +148,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     );
   }
 
-  // ---- Form Screen ----
+  // ----- Form Screen -----
   return (
     <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
@@ -184,7 +184,11 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                 placeholder="Kullanıcı adınızı giriniz"
                 className={`w-full px-4 py-3 rounded-lg bg-white/10 border ${errors.username ? 'border-red-500' : 'border-white/20'} text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30 transition-colors`}
               />
-              {errors.username && <p className="text-red-400 text-sm mt-1 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors.username}</p>}
+              {errors.username && (
+                <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" /> {errors.username}
+                </p>
+              )}
             </div>
 
             {/* Phone (+90 sabit) */}
@@ -199,14 +203,18 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                 <input
                   type="tel"
                   inputMode="numeric"
-                  pattern="\d*"
+                  pattern="[0-9]*"
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: onlyDigits(e.target.value).slice(0, 10) }))}
                   placeholder="Örn: 5XXXXXXXXX"
                   className={`flex-1 px-4 py-3 rounded-r-lg bg-white/10 border ${errors.phoneNumber ? 'border-red-500' : 'border-white/20'} text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30 transition-colors`}
                 />
               </div>
-              {errors.phoneNumber && <p className="text-red-400 text-sm mt-1 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors.phoneNumber}</p>}
+              {errors.phoneNumber && (
+                <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" /> {errors.phoneNumber}
+                </p>
+              )}
             </div>
 
             {/* Server Feedback */}
