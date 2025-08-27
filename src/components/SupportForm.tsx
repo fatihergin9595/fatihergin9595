@@ -7,15 +7,8 @@ import {
 
 interface SupportFormProps { onBack: () => void; }
 
-interface FormData {
-  username: string;      // kullanıcı adı
-  phoneNumber: string;   // 5XXXXXXXXX (10 hane, sadece rakam)
-}
-
-interface FormErrors {
-  username?: string;
-  phoneNumber?: string;
-}
+interface FormData { username: string; phoneNumber: string; }
+interface FormErrors { username?: string; phoneNumber?: string; }
 
 type Feedback =
   | { type: 'success'; message: string }
@@ -33,8 +26,10 @@ interface TroubleshootingStep {
   hasSubsections?: boolean;
 }
 
-// ----- Helpers -----
-const onlyDigits = (v: string) => v.replace(/\D/g, '');
+/* ---------- Helpers (regex literalleri kaldırıldı) ---------- */
+const onlyDigits = (v: string) => v.replace(new RegExp('\\D', 'g'), '');
+const phone10Regex = new RegExp('^5\\d{9}$'); // 5 ile başlayan 10 hane
+
 // TR normalize → "90XXXXXXXXXX"
 const toPhone90 = (raw: string): string | null => {
   const digits = onlyDigits(raw);
@@ -44,7 +39,7 @@ const toPhone90 = (raw: string): string | null => {
   return null;
 };
 
-// Netlify Function çağrısı (inline; harici import yok)
+// Netlify Function çağrısı
 async function callMembership(login: string, phone90: string) {
   const resp = await fetch('/.netlify/functions/membership-check', {
     method: 'POST',
@@ -61,18 +56,17 @@ async function callMembership(login: string, phone90: string) {
 }
 
 export default function SupportForm({ onBack }: SupportFormProps) {
-  // ---- Form state ----
+  /* ---------- Form state ---------- */
   const [formData, setFormData] = useState<FormData>({ username: '', phoneNumber: '' });
   const [errors, setErrors] = useState<FormErrors>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ---- Step (2. adım) state ----
+  /* ---------- Step (2. adım) state ---------- */
   const [showSteps, setShowSteps] = useState(false);
   const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
   const [showOperatorDetails, setShowOperatorDetails] = useState(false);
   const [showSpamDetails, setShowSpamDetails] = useState(false);
-  const [showBrowserDetails, setShowBrowserDetails] = useState(false);
 
   const [steps, setSteps] = useState<TroubleshootingStep[]>([
     {
@@ -81,9 +75,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       icon: <PhoneIcon className="w-5 h-5" />,
       explanation: 'Kodu almak için mutlaka bu butona basmanız gerekir.',
       instructions: ['"Kodu Al" butonuna bastığınızdan emin olun', 'Sayfayı yenileyip tekrar deneyin'],
-      isExpanded: false,
-      isCompleted: false,
-      isSolved: null
+      isExpanded: false, isCompleted: false, isSolved: null
     },
     {
       id: 'browser-issues',
@@ -91,9 +83,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       icon: <Smartphone className="w-5 h-5" />,
       explanation: 'Tarayıcı geçmişi veya çerezler nedeniyle kod ulaşmayabilir.',
       instructions: ['Çerezleri ve önbelleği silin', 'Arka planda açık sekmeleri kapatın', 'Farklı cihaz ya da tarayıcı deneyin'],
-      isExpanded: false,
-      isCompleted: false,
-      isSolved: null
+      isExpanded: false, isCompleted: false, isSolved: null
     },
     {
       id: 'spam-folder',
@@ -101,9 +91,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       icon: <AlertCircle className="w-5 h-5" />,
       explanation: 'Bazı operatörler bilinmeyen numaraları spam’e atabilir.',
       instructions: ['Mesaj uygulamasını açın', 'Spam/Engellenenler klasörlerini kontrol edin'],
-      isExpanded: false,
-      isCompleted: false,
-      isSolved: null
+      isExpanded: false, isCompleted: false, isSolved: null
     },
     {
       id: 'multiple-requests',
@@ -111,9 +99,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       icon: <RefreshCw className="w-5 h-5" />,
       explanation: 'Birden fazla talep gecikmeye neden olabilir.',
       instructions: ['15–20 dakika bekleyin', 'Çerezleri temizleyin', 'Gizli pencerede tekrar deneyin'],
-      isExpanded: false,
-      isCompleted: false,
-      isSolved: null
+      isExpanded: false, isCompleted: false, isSolved: null
     },
     {
       id: 'operator',
@@ -121,10 +107,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       icon: <PhoneIcon className="w-5 h-5" />,
       explanation: 'Her operatörün farklı SMS ayarları olabilir.',
       instructions: [],
-      isExpanded: false,
-      isCompleted: false,
-      isSolved: null,
-      hasSubsections: true
+      isExpanded: false, isCompleted: false, isSolved: null, hasSubsections: true
     },
     {
       id: 'international',
@@ -137,54 +120,43 @@ export default function SupportForm({ onBack }: SupportFormProps) {
         'Web sitesi dilini İngilizce yaparak tekrar deneyin',
         'VPN kullanmayı deneyin'
       ],
-      isExpanded: false,
-      isCompleted: false,
-      isSolved: null
+      isExpanded: false, isCompleted: false, isSolved: null
     },
   ]);
 
-  // ---- Validation ----
+  /* ---------- Validation ---------- */
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
     if (!formData.username.trim()) newErrors.username = 'Kullanıcı adı gereklidir';
 
     const tel = onlyDigits(formData.phoneNumber);
     if (!tel) newErrors.phoneNumber = 'Telefon numarası gereklidir';
-    else if (!/^5\d{9}$/.test(tel)) newErrors.phoneNumber = 'Geçerli bir telefon girin (5 ile başlayan 10 hane)';
+    else if (!phone10Regex.test(tel)) newErrors.phoneNumber = 'Geçerli bir telefon girin (5 ile başlayan 10 hane)';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ---- Handlers for steps ----
-  const toggleStep = (stepId: string) => {
-    setSteps(prev =>
-      prev.map(step => step.id === stepId ? { ...step, isExpanded: !step.isExpanded } : step)
-    );
-  };
+  /* ---------- Step helpers ---------- */
+  const toggleStep = (stepId: string) =>
+    setSteps(prev => prev.map(s => (s.id === stepId ? { ...s, isExpanded: !s.isExpanded } : s)));
 
   const markStepSolved = (stepId: string, solved: boolean) => {
-    setSteps(prev =>
-      prev.map(step => step.id === stepId ? { ...step, isSolved: solved, isCompleted: true } : step)
-    );
-
+    setSteps(prev => prev.map(s => (s.id === stepId ? { ...s, isSolved: solved, isCompleted: true } : s)));
     if (solved) {
       window.open('https://t.ly/golgiris', '_blank');
-    } else {
-      const currentIndex = steps.findIndex(s => s.id === stepId);
-      if (currentIndex < steps.length - 1) {
-        const nextId = steps[currentIndex + 1].id;
-        setSteps(prev => prev.map(s => s.id === nextId ? { ...s, isExpanded: true } : s));
-        setTimeout(() => {
-          const el = document.getElementById(`step-${nextId}`);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-      }
+      return;
+    }
+    const idx = steps.findIndex(s => s.id === stepId);
+    if (idx < steps.length - 1) {
+      const nextId = steps[idx + 1].id;
+      setSteps(prev => prev.map(s => (s.id === nextId ? { ...s, isExpanded: true } : s)));
+      setTimeout(() => document.getElementById(`step-${nextId}`)?.scrollIntoView({ behavior: 'smooth' }), 100);
     }
   };
 
   const getOperatorInstructions = (operator: string) => {
-    const instructions = {
+    const m = {
       turkcell: [
         'Tarife değişikliği sonrası SMS gelmeyebilir',
         'Turkcell’i arayıp SMS izinlerini kontrol ettirin',
@@ -200,11 +172,11 @@ export default function SupportForm({ onBack }: SupportFormProps) {
         'Çerezleri temizleyin',
         '15–20 dakika bekleyin'
       ]
-    };
-    return instructions[operator as keyof typeof instructions] || [];
+    } as const;
+    return (m as any)[operator] ?? [];
   };
 
-  // ---- Submit ----
+  /* ---------- Submit ---------- */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFeedback(null);
@@ -220,13 +192,10 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     setIsSubmitting(true);
     try {
       const res = await callMembership(formData.username.trim(), phone90);
-
       if (res.status === 'match') {
-        // 2. adımı aç: rehber/akordeonlar
-        setShowSteps(true);
+        setShowSteps(true); // 2. adımı aç
         return;
       }
-
       const msgMap: Record<string, string> = {
         not_found: 'Bu kullanıcı adına ait hesap bulunamadı.',
         ambiguous: 'Birden fazla kayıt bulundu, lütfen kullanıcı adını netleştirin.',
@@ -244,7 +213,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     }
   };
 
-  // ----- UI: Eşleşme sonrası (2. adım) -----
+  /* ---------- UI: Match sonrası adımlar ---------- */
   if (showSteps) {
     return (
       <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
@@ -265,12 +234,9 @@ export default function SupportForm({ onBack }: SupportFormProps) {
           <div className="text-center mb-8">
             <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
             <h1 className="text-2xl sm:text-3xl font-bold mb-2">Eşleşme Doğrulandı</h1>
-            <p className="text-gray-300 text-sm sm:text-base">
-              Aşağıdaki adımları takip ederek SMS’in size ulaşmasını sağlayalım.
-            </p>
+            <p className="text-gray-300 text-sm sm:text-base">Aşağıdaki adımları takip ederek SMS’in size ulaşmasını sağlayalım.</p>
           </div>
 
-          {/* Sorun giderme adımları */}
           <div className="space-y-4 mb-8">
             <h2 className="text-xl sm:text-2xl font-bold mb-4">Sorun giderme adımları</h2>
 
@@ -294,7 +260,6 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                       <p className="text-blue-100 text-sm sm:text-base">{step.explanation}</p>
                     </div>
 
-                    {/* Operator selection */}
                     {step.id === 'operator' && (
                       <div>
                         <h4 className="font-semibold mb-3">Operatörünüzü seçin:</h4>
@@ -303,22 +268,18 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                             { key: 'turkcell', name: 'Turkcell' },
                             { key: 'vodafone', name: 'Vodafone' },
                             { key: 'telekom', name: 'Türk Telekom' }
-                          ].map((operator) => (
+                          ].map((op) => (
                             <button
-                              key={operator.key}
-                              onClick={() => {
-                                setSelectedOperator(operator.key);
-                                setShowOperatorDetails(true);
-                              }}
+                              key={op.key}
+                              onClick={() => { setSelectedOperator(op.key); setShowOperatorDetails(true); }}
                               style={{
-                                backgroundColor: selectedOperator === operator.key ? '#ffffff' : 'transparent',
-                                color: selectedOperator === operator.key ? '#071d2a' : '#ffffff',
-                                borderRadius: '8px',
-                                transition: 'all 0.2s ease'
+                                backgroundColor: selectedOperator === op.key ? '#ffffff' : 'transparent',
+                                color: selectedOperator === op.key ? '#071d2a' : '#ffffff',
+                                borderRadius: '8px', transition: 'all 0.2s ease'
                               }}
                               className="px-4 py-3 border border-white/30 font-medium hover:bg-white/10 hover:shadow-md hover:border-white/50 transition-all duration-200 text-sm sm:text-base"
                             >
-                              📱 {operator.name}
+                              📱 {op.name}
                             </button>
                           ))}
                         </div>
@@ -329,10 +290,10 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                               {selectedOperator === 'telekom' ? 'Türk Telekom' : selectedOperator} Özel Talimatları:
                             </h5>
                             <ul className="space-y-3">
-                              {getOperatorInstructions(selectedOperator).map((instruction, i) => (
+                              {getOperatorInstructions(selectedOperator).map((t, i) => (
                                 <li key={i} className="flex items-start gap-3 p-2 bg-blue-500/10 rounded border-l-2 border-blue-400">
                                   <span className="text-blue-400 mt-1 font-bold">•</span>
-                                  <span className="text-blue-50 text-sm sm:text-base">{instruction}</span>
+                                  <span className="text-blue-50 text-sm sm:text-base">{t}</span>
                                 </li>
                               ))}
                             </ul>
@@ -341,7 +302,6 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                       </div>
                     )}
 
-                    {/* Spam details */}
                     {step.id === 'spam-folder' && (
                       <div className="space-y-4">
                         <h4 className="font-semibold mb-3">Spam Kontrol Seçenekleri:</h4>
@@ -351,8 +311,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                             style={{
                               backgroundColor: showSpamDetails ? '#ffffff' : 'transparent',
                               color: showSpamDetails ? '#071d2a' : '#ffffff',
-                              borderRadius: '8px',
-                              transition: 'all 0.2s ease'
+                              borderRadius: '8px', transition: 'all 0.2s ease'
                             }}
                             className="px-4 py-3 border border-white/30 font-medium hover:bg-white/10 hover:border-white/50 hover:shadow-md transition-all duration-200 text-sm sm:text-base flex items-center justify-between"
                           >
@@ -364,12 +323,10 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                         {showSpamDetails && (
                           <div className="space-y-4 mt-4">
                             <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                              <h5 className="font-semibold text-base mb-3 text-green-200 flex items-center gap-2">
-                                🤖 Android cihazlarda:
-                              </h5>
+                              <h5 className="font-semibold text-base mb-3 text-green-200">🤖 Android cihazlarda:</h5>
                               <ul className="text-xs sm:text-sm text-gray-200 space-y-2">
                                 <li className="flex items-start gap-2"><span className="text-green-400 mt-1">1.</span><span>Mesajlar uygulamasını açın.</span></li>
-                                <li className="flex items-start gap-2"><span className="text-green-400 mt-1">2.</span><span>Sağ üstteki "3 nokta" → Ayarlar.</span></li>
+                                <li className="flex items-start gap-2"><span className="text-green-400 mt-1">2.</span><span>Sağ üstteki üç nokta → Ayarlar.</span></li>
                                 <li className="flex items-start gap-2"><span className="text-green-400 mt-1">3.</span><span>"Spam ve engellenenler" / "Engellenen numaralar".</span></li>
                                 <li className="flex items-start gap-2"><span className="text-green-400 mt-1">4.</span><span>Listeleri kontrol edin.</span></li>
                                 <li className="flex items-start gap-2"><span className="text-green-400 mt-1">5.</span><span>SMS sağlayıcımıza ait olabilecek numaraların engelini kaldırın.</span></li>
@@ -377,14 +334,12 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                             </div>
 
                             <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                              <h5 className="font-semibold text-base mb-3 text-blue-200 flex items-center gap-2">
-                                📱 iPhone cihazlarda:
-                              </h5>
+                              <h5 className="font-semibold text-base mb-3 text-blue-200">📱 iPhone cihazlarda:</h5>
                               <ul className="text-xs sm:text-sm text-gray-200 space-y-2">
-                                <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">1.</span><span>Ayarlar → Mesajlar → Bilinmeyen & Spam.</span></li>
+                                <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">1.</span><span>Ayarlar → Mesajlar → Bilinmeyen &amp; Spam.</span></li>
                                 <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">2.</span><span>Filtreleme seçeneklerini kontrol edin.</span></li>
                                 <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">3.</span><span>Gerekliyse "Filtrele" özelliğini kapatın.</span></li>
-                                <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">4.</span><span>Ayarlar → Telefon → Engellenen kişiler bölümünden numara engellerini kaldırın.</span></li>
+                                <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">4.</span><span>Ayarlar → Telefon → Engellenen kişiler’den engelleri kaldırın.</span></li>
                               </ul>
                             </div>
                           </div>
@@ -392,22 +347,20 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                       </div>
                     )}
 
-                    {/* Genel talimat listesi */}
                     {step.id !== 'operator' && step.id !== 'spam-folder' && step.instructions.length > 0 && (
                       <div>
                         <h4 className="font-semibold mb-3 text-white">Çözüm Adımları:</h4>
                         <ul className="space-y-3">
-                          {step.instructions.map((instruction, i) => (
+                          {step.instructions.map((t, i) => (
                             <li key={i} className="flex items-start gap-3 p-3 bg-gray-500/10 rounded-lg border border-gray-500/20 hover:bg-gray-500/20 transition-colors">
                               <span className="text-blue-400 mt-1 font-bold">•</span>
-                              <span className="text-gray-200 text-sm sm:text-base">{instruction}</span>
+                              <span className="text-gray-200 text-sm sm:text-base">{t}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
                     )}
 
-                    {/* Çözüldü mü? */}
                     {step.id !== 'international' && (
                       <div className="pt-6 border-t border-white/10">
                         <p className="font-semibold mb-3 text-sm sm:text-base">Sorun çözüldü mü?</p>
@@ -435,14 +388,12 @@ export default function SupportForm({ onBack }: SupportFormProps) {
             ))}
           </div>
 
-          {/* Destek bölümü */}
           <div style={{ backgroundColor: '#0a2332', borderRadius: '10px', padding: '24px' }} className="mb-8">
             <div className="text-center">
               <h2 className="text-xl sm:text-2xl font-bold mb-4">Sorun devam ediyor mu?</h2>
               <p className="text-gray-300 mb-6 text-sm sm:text-base">
                 Yukarıdaki adımları denedikten sonra hâlâ sorun yaşıyorsanız, destek ekibimizle iletişime geçin.
               </p>
-
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <a
                   href="https://heylink.me/golbettr/"
@@ -475,11 +426,10 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     );
   }
 
-  // ----- UI: Form (1. adım) -----
+  /* ---------- UI: Form ---------- */
   return (
     <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
-        {/* Logo */}
         <div className="mb-8">
           <img
             src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1"
@@ -489,23 +439,17 @@ export default function SupportForm({ onBack }: SupportFormProps) {
           />
         </div>
 
-        {/* Back */}
         <button onClick={onBack} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors mb-6">
           <ArrowLeft className="w-5 h-5" /> Geri Dön
         </button>
 
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-4">Golbet SMS Destek Formu</h1>
-          <p className="text-gray-300 text-sm sm:text-base">
-            SMS doğrulama ile ilgili sorunlarınız için destek talebinde bulunun.
-          </p>
+          <p className="text-gray-300 text-sm sm:text-base">SMS doğrulama ile ilgili sorunlarınız için destek talebinde bulunun.</p>
         </div>
 
-        {/* Form */}
         <div style={{ backgroundColor: '#0a2332', borderRadius: '10px', padding: '24px' }} className="mb-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username */}
             <div>
               <label className="block text-sm font-medium mb-2 flex items-center gap-2">
                 <User className="w-4 h-4" /> Kullanıcı Adı *
@@ -524,7 +468,6 @@ export default function SupportForm({ onBack }: SupportFormProps) {
               )}
             </div>
 
-            {/* Phone (+90 sabit) */}
             <div>
               <label className="block text-sm font-medium mb-2 flex items-center gap-2">
                 <PhoneIcon className="w-4 h-4" /> Telefon Numarası *
@@ -550,23 +493,19 @@ export default function SupportForm({ onBack }: SupportFormProps) {
               )}
             </div>
 
-            {/* Server Feedback */}
             {feedback && (
-              <div
-                className={`flex items-start gap-2 p-3 rounded-lg border ${
-                  feedback.type === 'success'
-                    ? 'bg-green-500/20 border-green-500/30 text-green-100'
-                    : feedback.type === 'warning'
-                    ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-100'
-                    : 'bg-red-500/20 border-red-500/30 text-red-100'
-                }`}
-              >
+              <div className={`flex items-start gap-2 p-3 rounded-lg border ${
+                feedback.type === 'success'
+                  ? 'bg-green-500/20 border-green-500/30 text-green-100'
+                  : feedback.type === 'warning'
+                  ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-100'
+                  : 'bg-red-500/20 border-red-500/30 text-red-100'
+              }`}>
                 <AlertCircle className="w-5 h-5 mt-0.5" />
                 <p className="text-sm">{feedback.message}</p>
               </div>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={isSubmitting}
