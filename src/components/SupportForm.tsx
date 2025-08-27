@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Mail, User, Phone, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Mail, User, Phone, CheckCircle, AlertCircle } from 'lucide-react';
 import { checkMembership } from '../services/membership';
 
 interface SupportFormProps {
@@ -9,15 +9,11 @@ interface SupportFormProps {
 interface FormData {
   username: string;
   phoneNumber: string; // 5XXXXXXXXX (10 hane, sadece rakam)
-  email: string;
-  fullName: string;
 }
 
 interface FormErrors {
   username?: string;
   phoneNumber?: string;
-  email?: string;
-  fullName?: string;
 }
 
 type Feedback =
@@ -28,8 +24,6 @@ export default function SupportForm({ onBack }: SupportFormProps) {
   const [formData, setFormData] = useState<FormData>({
     username: '',
     phoneNumber: '',
-    email: '',
-    fullName: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -62,16 +56,6 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       newErrors.phoneNumber = 'Telefon numarası gereklidir';
     } else if (!/^5\d{9}$/.test(tel)) {
       newErrors.phoneNumber = 'Geçerli bir telefon girin (5 ile başlayan 10 hane)';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email adresi gereklidir';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Geçerli bir email adresi girin';
-    }
-
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Ad soyad gereklidir';
     }
 
     setErrors(newErrors);
@@ -162,14 +146,6 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                 <div className="flex justify-between">
                   <span className="text-gray-400">Telefon:</span>
                   <span>+90 {onlyDigits(formData.phoneNumber)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Email:</span>
-                  <span>{formData.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Ad Soyad:</span>
-                  <span>{formData.fullName}</span>
                 </div>
               </div>
             </div>
@@ -271,52 +247,6 @@ export default function SupportForm({ onBack }: SupportFormProps) {
                 <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
                   <AlertCircle className="w-4 h-4" />
                   {errors.phoneNumber}
-                </p>
-              )}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email Adresi *
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="Email adresinizi girin"
-                className={`w-full px-4 py-3 rounded-lg bg-white/10 border ${
-                  errors.email ? 'border-red-500' : 'border-white/20'
-                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30 transition-colors`}
-              />
-              {errors.email && (
-                <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.email}
-                </p>
-              )}
-            </div>
-
-            {/* Full Name */}
-            <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Ad Soyad *
-              </label>
-              <input
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => handleInputChange('fullName', e.target.value)}
-                placeholder="Ad ve soyadınızı girin"
-                className={`w-full px-4 py-3 rounded-lg bg-white/10 border ${
-                  errors.fullName ? 'border-red-500' : 'border-white/20'
-                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/30 transition-colors`}
-              />
-              {errors.fullName && (
-                <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.fullName}
                 </p>
               )}
             </div>
