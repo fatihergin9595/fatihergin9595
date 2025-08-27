@@ -1,6 +1,9 @@
 // src/components/SupportForm.tsx
 import React, { useState } from 'react';
-import { ArrowLeft, Mail, User, Phone, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  ArrowLeft, Mail, User, Phone as PhoneIcon, CheckCircle, AlertCircle,
+  ChevronDown, ChevronRight, MessageSquare, ExternalLink, Smartphone, Globe, RefreshCw
+} from 'lucide-react';
 
 interface SupportFormProps { onBack: () => void; }
 
@@ -17,6 +20,18 @@ interface FormErrors {
 type Feedback =
   | { type: 'success'; message: string }
   | { type: 'warning' | 'error'; message: string };
+
+interface TroubleshootingStep {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  explanation: string;
+  instructions: string[];
+  isExpanded: boolean;
+  isCompleted: boolean;
+  isSolved: boolean | null;
+  hasSubsections?: boolean;
+}
 
 // ----- Helpers -----
 const onlyDigits = (v: string) => v.replace(/\D/g, '');
@@ -46,13 +61,89 @@ async function callMembership(login: string, phone90: string) {
 }
 
 export default function SupportForm({ onBack }: SupportFormProps) {
+  // ---- Form state ----
   const [formData, setFormData] = useState<FormData>({ username: '', phoneNumber: '' });
   const [errors, setErrors] = useState<FormErrors>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // ----- Validation -----
+  // ---- Step (2. adım) state ----
+  const [showSteps, setShowSteps] = useState(false);
+  const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
+  const [showOperatorDetails, setShowOperatorDetails] = useState(false);
+  const [showSpamDetails, setShowSpamDetails] = useState(false);
+  const [showBrowserDetails, setShowBrowserDetails] = useState(false);
+
+  const [steps, setSteps] = useState<TroubleshootingStep[]>([
+    {
+      id: 'send-button',
+      title: '"Kodu Al" butonuna bastınız mı?',
+      icon: <PhoneIcon className="w-5 h-5" />,
+      explanation: 'Kodu almak için mutlaka bu butona basmanız gerekir.',
+      instructions: ['"Kodu Al" butonuna bastığınızdan emin olun', 'Sayfayı yenileyip tekrar deneyin'],
+      isExpanded: false,
+      isCompleted: false,
+      isSolved: null
+    },
+    {
+      id: 'browser-issues',
+      title: 'Tarayıcı geçmişinizi temizlediniz mi?',
+      icon: <Smartphone className="w-5 h-5" />,
+      explanation: 'Tarayıcı geçmişi veya çerezler nedeniyle kod ulaşmayabilir.',
+      instructions: ['Çerezleri ve önbelleği silin', 'Arka planda açık sekmeleri kapatın', 'Farklı cihaz ya da tarayıcı deneyin'],
+      isExpanded: false,
+      isCompleted: false,
+      isSolved: null
+    },
+    {
+      id: 'spam-folder',
+      title: 'Spam veya engellenen mesajları kontrol ettiniz mi?',
+      icon: <AlertCircle className="w-5 h-5" />,
+      explanation: 'Bazı operatörler bilinmeyen numaraları spam’e atabilir.',
+      instructions: ['Mesaj uygulamasını açın', 'Spam/Engellenenler klasörlerini kontrol edin'],
+      isExpanded: false,
+      isCompleted: false,
+      isSolved: null
+    },
+    {
+      id: 'multiple-requests',
+      title: 'Art arda kod talep ettiniz mi?',
+      icon: <RefreshCw className="w-5 h-5" />,
+      explanation: 'Birden fazla talep gecikmeye neden olabilir.',
+      instructions: ['15–20 dakika bekleyin', 'Çerezleri temizleyin', 'Gizli pencerede tekrar deneyin'],
+      isExpanded: false,
+      isCompleted: false,
+      isSolved: null
+    },
+    {
+      id: 'operator',
+      title: 'Operatörünüz nedir?',
+      icon: <PhoneIcon className="w-5 h-5" />,
+      explanation: 'Her operatörün farklı SMS ayarları olabilir.',
+      instructions: [],
+      isExpanded: false,
+      isCompleted: false,
+      isSolved: null,
+      hasSubsections: true
+    },
+    {
+      id: 'international',
+      title: 'Yurt dışında mı yaşıyorsunuz?',
+      icon: <Globe className="w-5 h-5" />,
+      explanation: 'Yurtdışı konumu, SMS alımında sorun yaratabilir.',
+      instructions: [
+        'Operatörünüzün uluslararası SMS desteğini kontrol edin',
+        'Roaming ve uluslararası SMS alım iznini aktif edin',
+        'Web sitesi dilini İngilizce yaparak tekrar deneyin',
+        'VPN kullanmayı deneyin'
+      ],
+      isExpanded: false,
+      isCompleted: false,
+      isSolved: null
+    },
+  ]);
+
+  // ---- Validation ----
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
     if (!formData.username.trim()) newErrors.username = 'Kullanıcı adı gereklidir';
@@ -65,7 +156,55 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ----- Submit -----
+  // ---- Handlers for steps ----
+  const toggleStep = (stepId: string) => {
+    setSteps(prev =>
+      prev.map(step => step.id === stepId ? { ...step, isExpanded: !step.isExpanded } : step)
+    );
+  };
+
+  const markStepSolved = (stepId: string, solved: boolean) => {
+    setSteps(prev =>
+      prev.map(step => step.id === stepId ? { ...step, isSolved: solved, isCompleted: true } : step)
+    );
+
+    if (solved) {
+      window.open('https://t.ly/golgiris', '_blank');
+    } else {
+      const currentIndex = steps.findIndex(s => s.id === stepId);
+      if (currentIndex < steps.length - 1) {
+        const nextId = steps[currentIndex + 1].id;
+        setSteps(prev => prev.map(s => s.id === nextId ? { ...s, isExpanded: true } : s));
+        setTimeout(() => {
+          const el = document.getElementById(`step-${nextId}`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+  };
+
+  const getOperatorInstructions = (operator: string) => {
+    const instructions = {
+      turkcell: [
+        'Tarife değişikliği sonrası SMS gelmeyebilir',
+        'Turkcell’i arayıp SMS izinlerini kontrol ettirin',
+        '20–30 dakika sonra tekrar deneyin'
+      ],
+      vodafone: [
+        'Telefonu yeniden başlatın',
+        'Farklı cihaz veya tarayıcı kullanın',
+        'Çerezleri temizleyin ve tekrar deneyin'
+      ],
+      telekom: [
+        'Gizli pencerede açın',
+        'Çerezleri temizleyin',
+        '15–20 dakika bekleyin'
+      ]
+    };
+    return instructions[operator as keyof typeof instructions] || [];
+  };
+
+  // ---- Submit ----
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFeedback(null);
@@ -83,7 +222,8 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       const res = await callMembership(formData.username.trim(), phone90);
 
       if (res.status === 'match') {
-        setIsSubmitted(true);
+        // 2. adımı aç: rehber/akordeonlar
+        setShowSteps(true);
         return;
       }
 
@@ -104,11 +244,11 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     }
   };
 
-  // ----- Success Screen -----
-  if (isSubmitted) {
+  // ----- UI: Eşleşme sonrası (2. adım) -----
+  if (showSteps) {
     return (
       <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-3xl mx-auto">
           <div className="mb-8">
             <img
               src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1"
@@ -118,40 +258,228 @@ export default function SupportForm({ onBack }: SupportFormProps) {
             />
           </div>
 
-          <div className="text-center">
-            <div className="mb-6">
-              <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              <h1 className="text-2xl sm:text-3xl font-bold mb-4">Eşleşme Doğrulandı</h1>
-              <p className="text-gray-300 text-sm sm:text-base mb-6">
-                Üyelik doğrulaması başarıyla tamamlandı. Devam etmek için yönlendirmeleri takip edin.
-              </p>
-            </div>
+          <button onClick={onBack} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors mb-6">
+            <ArrowLeft className="w-5 h-5" /> Geri Dön
+          </button>
 
-            <div style={{ backgroundColor: '#0a2332', borderRadius: '10px', padding: '24px' }} className="mb-8">
-              <h2 className="text-lg font-semibold mb-4">Gönderilen Bilgiler</h2>
-              <div className="space-y-3 text-left">
-                <div className="flex justify-between"><span className="text-gray-400">Kullanıcı Adı:</span><span>{formData.username}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Telefon:</span><span>+90 {onlyDigits(formData.phoneNumber)}</span></div>
+          <div className="text-center mb-8">
+            <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Eşleşme Doğrulandı</h1>
+            <p className="text-gray-300 text-sm sm:text-base">
+              Aşağıdaki adımları takip ederek SMS’in size ulaşmasını sağlayalım.
+            </p>
+          </div>
+
+          {/* Sorun giderme adımları */}
+          <div className="space-y-4 mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4">Sorun giderme adımları</h2>
+
+            {steps.map((step, index) => (
+              <div key={step.id} id={`step-${step.id}`} style={{ backgroundColor: '#0a2332', borderRadius: '10px', padding: '24px' }}>
+                <button
+                  onClick={() => toggleStep(step.id)}
+                  className="w-full flex items-center justify-between text-left hover:bg-white/5 hover:shadow-lg transition-all duration-200 rounded-lg p-2 -m-2 border border-transparent hover:border-white/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-blue-400">{step.icon}</span>
+                    <span className="font-semibold text-sm sm:text-base">Adım {index + 1}: {step.title}</span>
+                    {step.isSolved === true && <CheckCircle className="w-5 h-5 text-green-400" />}
+                  </div>
+                  {step.isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                </button>
+
+                {step.isExpanded && (
+                  <div className="mt-4 pl-4 sm:pl-8 space-y-4">
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <p className="text-blue-100 text-sm sm:text-base">{step.explanation}</p>
+                    </div>
+
+                    {/* Operator selection */}
+                    {step.id === 'operator' && (
+                      <div>
+                        <h4 className="font-semibold mb-3">Operatörünüzü seçin:</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                          {[
+                            { key: 'turkcell', name: 'Turkcell' },
+                            { key: 'vodafone', name: 'Vodafone' },
+                            { key: 'telekom', name: 'Türk Telekom' }
+                          ].map((operator) => (
+                            <button
+                              key={operator.key}
+                              onClick={() => {
+                                setSelectedOperator(operator.key);
+                                setShowOperatorDetails(true);
+                              }}
+                              style={{
+                                backgroundColor: selectedOperator === operator.key ? '#ffffff' : 'transparent',
+                                color: selectedOperator === operator.key ? '#071d2a' : '#ffffff',
+                                borderRadius: '8px',
+                                transition: 'all 0.2s ease'
+                              }}
+                              className="px-4 py-3 border border-white/30 font-medium hover:bg-white/10 hover:shadow-md hover:border-white/50 transition-all duration-200 text-sm sm:text-base"
+                            >
+                              📱 {operator.name}
+                            </button>
+                          ))}
+                        </div>
+
+                        {selectedOperator && showOperatorDetails && (
+                          <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+                            <h5 className="font-semibold mb-3 capitalize text-blue-200">
+                              {selectedOperator === 'telekom' ? 'Türk Telekom' : selectedOperator} Özel Talimatları:
+                            </h5>
+                            <ul className="space-y-3">
+                              {getOperatorInstructions(selectedOperator).map((instruction, i) => (
+                                <li key={i} className="flex items-start gap-3 p-2 bg-blue-500/10 rounded border-l-2 border-blue-400">
+                                  <span className="text-blue-400 mt-1 font-bold">•</span>
+                                  <span className="text-blue-50 text-sm sm:text-base">{instruction}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Spam details */}
+                    {step.id === 'spam-folder' && (
+                      <div className="space-y-4">
+                        <h4 className="font-semibold mb-3">Spam Kontrol Seçenekleri:</h4>
+                        <div className="grid grid-cols-1 gap-3 mb-4">
+                          <button
+                            onClick={() => setShowSpamDetails(!showSpamDetails)}
+                            style={{
+                              backgroundColor: showSpamDetails ? '#ffffff' : 'transparent',
+                              color: showSpamDetails ? '#071d2a' : '#ffffff',
+                              borderRadius: '8px',
+                              transition: 'all 0.2s ease'
+                            }}
+                            className="px-4 py-3 border border-white/30 font-medium hover:bg-white/10 hover:border-white/50 hover:shadow-md transition-all duration-200 text-sm sm:text-base flex items-center justify-between"
+                          >
+                            <span>📱 Spam klasörünü ve engellenen numaraları kontrol et</span>
+                            {showSpamDetails ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                          </button>
+                        </div>
+
+                        {showSpamDetails && (
+                          <div className="space-y-4 mt-4">
+                            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                              <h5 className="font-semibold text-base mb-3 text-green-200 flex items-center gap-2">
+                                🤖 Android cihazlarda:
+                              </h5>
+                              <ul className="text-xs sm:text-sm text-gray-200 space-y-2">
+                                <li className="flex items-start gap-2"><span className="text-green-400 mt-1">1.</span><span>Mesajlar uygulamasını açın.</span></li>
+                                <li className="flex items-start gap-2"><span className="text-green-400 mt-1">2.</span><span>Sağ üstteki "3 nokta" → Ayarlar.</span></li>
+                                <li className="flex items-start gap-2"><span className="text-green-400 mt-1">3.</span><span>"Spam ve engellenenler" / "Engellenen numaralar".</span></li>
+                                <li className="flex items-start gap-2"><span className="text-green-400 mt-1">4.</span><span>Listeleri kontrol edin.</span></li>
+                                <li className="flex items-start gap-2"><span className="text-green-400 mt-1">5.</span><span>SMS sağlayıcımıza ait olabilecek numaraların engelini kaldırın.</span></li>
+                              </ul>
+                            </div>
+
+                            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                              <h5 className="font-semibold text-base mb-3 text-blue-200 flex items-center gap-2">
+                                📱 iPhone cihazlarda:
+                              </h5>
+                              <ul className="text-xs sm:text-sm text-gray-200 space-y-2">
+                                <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">1.</span><span>Ayarlar → Mesajlar → Bilinmeyen & Spam.</span></li>
+                                <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">2.</span><span>Filtreleme seçeneklerini kontrol edin.</span></li>
+                                <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">3.</span><span>Gerekliyse "Filtrele" özelliğini kapatın.</span></li>
+                                <li className="flex items-start gap-2"><span className="text-blue-400 mt-1">4.</span><span>Ayarlar → Telefon → Engellenen kişiler bölümünden numara engellerini kaldırın.</span></li>
+                              </ul>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Genel talimat listesi */}
+                    {step.id !== 'operator' && step.id !== 'spam-folder' && step.instructions.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-3 text-white">Çözüm Adımları:</h4>
+                        <ul className="space-y-3">
+                          {step.instructions.map((instruction, i) => (
+                            <li key={i} className="flex items-start gap-3 p-3 bg-gray-500/10 rounded-lg border border-gray-500/20 hover:bg-gray-500/20 transition-colors">
+                              <span className="text-blue-400 mt-1 font-bold">•</span>
+                              <span className="text-gray-200 text-sm sm:text-base">{instruction}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Çözüldü mü? */}
+                    {step.id !== 'international' && (
+                      <div className="pt-6 border-t border-white/10">
+                        <p className="font-semibold mb-3 text-sm sm:text-base">Sorun çözüldü mü?</p>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <button
+                            onClick={() => markStepSolved(step.id, true)}
+                            style={{ backgroundColor: '#22c55e', color: '#ffffff', borderRadius: '8px' }}
+                            className="px-4 py-2 font-medium hover:bg-green-600 hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
+                          >
+                            ✅ Evet, çözüldü!
+                          </button>
+                          <button
+                            onClick={() => markStepSolved(step.id, false)}
+                            style={{ backgroundColor: 'transparent', color: '#ffffff', borderRadius: '8px' }}
+                            className="px-4 py-2 border border-white/30 font-medium hover:bg-white/10 hover:border-white/50 hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
+                          >
+                            ❌ Hayır, hâlâ sorun var
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Destek bölümü */}
+          <div style={{ backgroundColor: '#0a2332', borderRadius: '10px', padding: '24px' }} className="mb-8">
+            <div className="text-center">
+              <h2 className="text-xl sm:text-2xl font-bold mb-4">Sorun devam ediyor mu?</h2>
+              <p className="text-gray-300 mb-6 text-sm sm:text-base">
+                Yukarıdaki adımları denedikten sonra hâlâ sorun yaşıyorsanız, destek ekibimizle iletişime geçin.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <a
+                  href="https://heylink.me/golbettr/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ backgroundColor: '#1475E1', color: '#ffffff', borderRadius: '8px' }}
+                  className="flex items-center justify-center gap-2 px-6 py-3 font-bold hover:bg-blue-600 hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
+                >
+                  <Mail className="w-5 h-5" />
+                  ✉️ Golbet Destek
+                </a>
+                <a
+                  href="https://t.ly/golgiris"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ backgroundColor: '#ffffff', color: '#1475E1', borderRadius: '8px' }}
+                  className="flex items-center justify-center gap-2 px-6 py-3 font-bold hover:bg-gray-100 hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  💬 Canlı Destek
+                  <ExternalLink className="w-4 h-4" />
+                </a>
               </div>
             </div>
-
-            <button
-              onClick={onBack}
-              style={{ backgroundColor: '#ffffff', color: '#071d2a', borderRadius: '8px' }}
-              className="inline-flex items-center gap-2 px-6 py-3 font-bold hover:bg-gray-100 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" /> Ana Sayfaya Dön
-            </button>
           </div>
+
         </div>
       </div>
+    </div>
     );
   }
 
-  // ----- Form Screen -----
+  // ----- UI: Form (1. adım) -----
   return (
     <div style={{ backgroundColor: '#071d2a', color: '#ffffff', fontFamily: 'Arial, sans-serif' }} className="min-h-screen p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
+        {/* Logo */}
         <div className="mb-8">
           <img
             src="https://www.dropbox.com/scl/fi/pvb7973w7rlo26oz1tf1u/SMS.png?rlkey=z07in99h8g836v811mqqj47he&st=vj6yfqfp&dl=1"
@@ -161,15 +489,20 @@ export default function SupportForm({ onBack }: SupportFormProps) {
           />
         </div>
 
+        {/* Back */}
         <button onClick={onBack} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors mb-6">
           <ArrowLeft className="w-5 h-5" /> Geri Dön
         </button>
 
+        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-4">Golbet SMS Destek Formu</h1>
-          <p className="text-gray-300 text-sm sm:text-base">SMS doğrulama ile ilgili sorunlarınız için destek talebinde bulunun.</p>
+          <p className="text-gray-300 text-sm sm:text-base">
+            SMS doğrulama ile ilgili sorunlarınız için destek talebinde bulunun.
+          </p>
         </div>
 
+        {/* Form */}
         <div style={{ backgroundColor: '#0a2332', borderRadius: '10px', padding: '24px' }} className="mb-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Username */}
@@ -194,7 +527,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
             {/* Phone (+90 sabit) */}
             <div>
               <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                <Phone className="w-4 h-4" /> Telefon Numarası *
+                <PhoneIcon className="w-4 h-4" /> Telefon Numarası *
               </label>
               <div className="flex">
                 <div className="px-4 py-3 rounded-l-lg bg-white/10 border border-white/20 border-r-0 text-white min-w-[120px] flex items-center gap-2">
