@@ -248,7 +248,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
               ) : (
                 <>
                   <Mail className="w-5 h-5" />
-                  Üyeliğimi Kontrol Et
+                  Üyeliğimi Kontrol V3
                 </>
               )}
             </button>
