@@ -4,6 +4,8 @@ export type MembershipResult =
   | { status: 'mismatch' | 'not_found' | 'ambiguous' | 'error'; message?: string };
 
 export async function checkMembership(login: string, phone90: string): Promise<MembershipResult> {
+  console.log('[membership] calling function with', { login, phone90 }); // debug
+
   const resp = await fetch('/.netlify/functions/membership-check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
