@@ -274,7 +274,7 @@ const StepsPanel: React.FC = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
-              href="https://heylink.me/golbettr/"
+              href="https://www.goldestek.com/"
               target="_blank"
               rel="noopener noreferrer"
               style={{ backgroundColor: '#1475E1', color: '#ffffff', borderRadius: '8px' }}

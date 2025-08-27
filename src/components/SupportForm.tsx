@@ -94,9 +94,9 @@ export default function SupportForm({ onBack }: SupportFormProps) {
             />
           </div>
 
-          <button onClick={onBack} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors mb-6">
+          {/* <button onClick={onBack} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors mb-6">
             <ArrowLeft className="w-5 h-5" /> Geri Dön
-          </button>
+          </button> */}
 
           <div className="text-center mb-8">
             <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
@@ -123,9 +123,9 @@ export default function SupportForm({ onBack }: SupportFormProps) {
           />
         </div>
 
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors mb-6">
+        {/* <button onClick={onBack} className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors mb-6">
           <ArrowLeft className="w-5 h-5" /> Geri Dön
-        </button>
+        </button> */}
 
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-4">Golbet SMS Destek Formu</h1>
@@ -213,7 +213,6 @@ export default function SupportForm({ onBack }: SupportFormProps) {
           <div className="mt-6 p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
             <p className="text-blue-100 text-sm">
               <strong>Not:</strong> Telefon numarasını <strong>5 ile başlayan 10 hane</strong> olarak girin.
-              Sistem karşılaştırmayı <strong>90XXXXXXXXXX</strong> formatında yapar.
             </p>
           </div>
         </div>
