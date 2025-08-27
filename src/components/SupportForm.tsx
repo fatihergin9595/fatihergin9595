@@ -72,6 +72,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
     if (feedback) setFeedback(null);
   };
 
+  console.log('submit start', formData);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFeedback(null);
@@ -83,6 +84,8 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       setErrors(prev => ({ ...prev, phoneNumber: 'Telefon formatı hatalı (5XXXXXXXXX)' }));
       return;
     }
+
+    console.log('posting to function...');
 
     setIsSubmitting(true);
     try {

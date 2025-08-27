@@ -12,16 +12,15 @@ export async function checkMembership(login: string, phone90: string): Promise<M
 
   const text = await resp.text();
   let json: any = null;
-  try { json = text ? JSON.parse(text) : null; } catch { /* noop */ }
+  try { json = text ? JSON.parse(text) : null; } catch { /* ignore */ }
 
   if (!resp.ok) {
     return { status: 'error', message: json?.message || `HTTP ${resp.status}: ${text?.slice?.(0, 200) ?? ''}` };
   }
 
-  // YALNIZCA beklenen status değerlerini kabul et
-  const okStatuses = new Set(['match','mismatch','not_found','ambiguous','error']);
+  const ok = new Set(['match','mismatch','not_found','ambiguous','error']);
   const s = json?.status;
-  if (typeof s !== 'string' || !okStatuses.has(s)) {
+  if (typeof s !== 'string' || !ok.has(s)) {
     return { status: 'error', message: 'Beklenmeyen yanıt.' };
   }
   return json as MembershipResult;
