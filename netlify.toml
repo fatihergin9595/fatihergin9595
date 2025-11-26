@@ -1,0 +1,19 @@
+# netlify.toml — Vite + React + Netlify Functions (TS)
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA (history fallback): tüm yollar index.html'e düşsün
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Netlify Functions ayarı (server-side API proxy)
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
