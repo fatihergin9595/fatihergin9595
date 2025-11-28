@@ -32,8 +32,7 @@ type GetClientByIdResp = {
   AlertMessage?: string;
 };
 
-const API_BASE =
-  process.env.API_BASE ?? "https://backofficewebadmin.betconstruct.com/api/en";
+const API_BASE = "https://backofficewebadmin.betconstruct.com/api/en";
 const API_KEY = process.env.API_KEY;
 
 /** ---- IP alma helper'ı (Netlify özel) ---- **/
