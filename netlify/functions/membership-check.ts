@@ -99,7 +99,9 @@ export const handler: Handler = async (event) => {
 
     const todayCount: number = rows[0]?.count ?? 0;
     const DAILY_LIMIT = 5;
+    const USERNAME_DAILY_LIMIT = 5; // kullanıcı adı başına günlük limit
 
+    // 1.a) IP bazlı limit
     if (todayCount >= DAILY_LIMIT) {
       await pool.query(
         `
@@ -113,7 +115,40 @@ export const handler: Handler = async (event) => {
         statusCode: 429,
         body: JSON.stringify({
           status: "rate_limit",
-          message: "Bu IP adresi için günlük sorgu limitiniz dolmuştur.",
+          message: "Günlük sorgu limitiniz dolmuştur.",
+        }),
+        headers: { "Content-Type": "application/json" },
+      };
+    }
+
+    // 1.b) Username bazlı günlük limit
+    const { rows: userRows } = await pool.query(
+      `
+      select count(*)::int as count
+      from verification_logs
+      where username = $1
+        and created_at >= CURRENT_DATE
+        and result != 'blocked_user_limit'
+    `,
+      [login]
+    );
+
+    const userTodayCount: number = userRows[0]?.count ?? 0;
+
+    if (userTodayCount >= USERNAME_DAILY_LIMIT) {
+      await pool.query(
+        `
+        insert into verification_logs (username, phone, ip, result)
+        values ($1, $2, $3, $4)
+      `,
+        [login, userPhone, ip, "blocked_user_limit"]
+      );
+
+      return {
+        statusCode: 429,
+        body: JSON.stringify({
+          status: "rate_limit_username",
+          message: "Bu kullanıcı adı için günlük sorgu limitiniz dolmuştur.",
         }),
         headers: { "Content-Type": "application/json" },
       };
