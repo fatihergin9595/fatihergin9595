@@ -47,6 +47,17 @@ function getClientIp(event: HandlerEvent): string {
   return clientIp || "unknown";
 }
 
+/** ---- User-Agent helper'ı ---- **/
+function getUserAgent(event: HandlerEvent): string {
+  const headers = event.headers || {};
+  return (
+    headers["user-agent"] ||
+    // bazı ortamlarda farklı case olabilir
+    (headers as any)["User-Agent"] ||
+    ""
+  );
+}
+
 /** ---- Handler ---- **/
 export const handler: Handler = async (event) => {
   try {
@@ -70,6 +81,7 @@ export const handler: Handler = async (event) => {
     const loginRaw = (body.login || "").trim();
     const userPhone = normalizeTR(body.phone);
     const ip = getClientIp(event);
+    const userAgent = getUserAgent(event);
 
     if (!loginRaw || !userPhone) {
       return {
@@ -105,10 +117,10 @@ export const handler: Handler = async (event) => {
     if (todayCount >= DAILY_LIMIT) {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "blocked_limit"]
+        [login, userPhone, ip, "blocked_limit", userAgent]
       );
 
       return {
@@ -138,10 +150,10 @@ export const handler: Handler = async (event) => {
     if (userTodayCount >= USERNAME_DAILY_LIMIT) {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "blocked_user_limit"]
+        [login, userPhone, ip, "blocked_user_limit", userAgent]
       );
 
       return {
@@ -227,7 +239,7 @@ export const handler: Handler = async (event) => {
 
     const commonHeaders: Record<string, string> = {
       "Content-Type": "application/json",
-      Authentication: API_KEY,
+      Authentication: API_KEY!,
     };
 
     const gcRes = await fetch(`${BETCO_API_BASE}/Client/GetClients`, {
@@ -240,10 +252,10 @@ export const handler: Handler = async (event) => {
     if (!gcRes.ok) {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "error_getclients"]
+        [login, userPhone, ip, "error_getclients", userAgent]
       );
 
       return {
@@ -262,10 +274,10 @@ export const handler: Handler = async (event) => {
     } catch {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "error_getclients_json"]
+        [login, userPhone, ip, "error_getclients_json", userAgent]
       );
 
       return {
@@ -280,10 +292,10 @@ export const handler: Handler = async (event) => {
     if (gcJson.HasError) {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "error_getclients_haserror"]
+        [login, userPhone, ip, "error_getclients_haserror", userAgent]
       );
 
       return {
@@ -302,10 +314,10 @@ export const handler: Handler = async (event) => {
     if (count === 0 || objs.length === 0) {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "no_match"]
+        [login, userPhone, ip, "no_match", userAgent]
       );
 
       return {
@@ -321,10 +333,10 @@ export const handler: Handler = async (event) => {
     if (count > 1 || objs.length > 1) {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "no_match"]
+        [login, userPhone, ip, "no_match", userAgent]
       );
 
       return {
@@ -353,10 +365,10 @@ export const handler: Handler = async (event) => {
     if (!byIdRes.ok) {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "error_getclientbyid"]
+        [login, userPhone, ip, "error_getclientbyid", userAgent]
       );
 
       return {
@@ -378,10 +390,10 @@ export const handler: Handler = async (event) => {
     } catch {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "error_getclientbyid_json"]
+        [login, userPhone, ip, "error_getclientbyid_json", userAgent]
       );
 
       return {
@@ -396,10 +408,10 @@ export const handler: Handler = async (event) => {
     if (byIdJson.HasError) {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "error_getclientbyid_haserror"]
+        [login, userPhone, ip, "error_getclientbyid_haserror", userAgent]
       );
 
       return {
@@ -419,10 +431,10 @@ export const handler: Handler = async (event) => {
     if (!serverPhone) {
       await pool.query(
         `
-        insert into verification_logs (username, phone, ip, result)
-        values ($1, $2, $3, $4)
+        insert into verification_logs (username, phone, ip, result, user_agent)
+        values ($1, $2, $3, $4, $5)
       `,
-        [login, userPhone, ip, "no_match"]
+        [login, userPhone, ip, "no_match", userAgent]
       );
 
       return {
@@ -440,10 +452,10 @@ export const handler: Handler = async (event) => {
 
     await pool.query(
       `
-      insert into verification_logs (username, phone, ip, result)
-      values ($1, $2, $3, $4)
+      insert into verification_logs (username, phone, ip, result, user_agent)
+      values ($1, $2, $3, $4, $5)
     `,
-      [login, userPhone, ip, logResult]
+      [login, userPhone, ip, logResult, userAgent]
     );
 
     return {
@@ -463,7 +475,8 @@ export const handler: Handler = async (event) => {
       statusCode: 500,
       body: JSON.stringify({
         status: "error",
-        message: "Şu anda teknik bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        message:
+          "Şu anda teknik bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
       }),
       headers: { "Content-Type": "application/json" },
     };
