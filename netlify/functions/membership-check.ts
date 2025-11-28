@@ -1,9 +1,6 @@
 // netlify/functions/membership-check.ts
 import type { Handler } from '@netlify/functions';
-<<<<<<< HEAD
 import { pool } from '../../lib/db';
-=======
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
 
 /** ---- Yardımcılar ---- **/
 
@@ -32,7 +29,6 @@ type GetClientByIdResp = {
 const API_BASE = process.env.API_BASE ?? 'https://backofficewebadmin.betconstruct.com/api/en';
 const API_KEY  = process.env.API_KEY;
 
-<<<<<<< HEAD
 /** ---- IP alma helper'ı (Netlify özel) ---- **/
 function getClientIp(event: Parameters<Handler>[0]): string {
   const headers = event.headers || {};
@@ -44,8 +40,6 @@ function getClientIp(event: Parameters<Handler>[0]): string {
   return clientIp || 'unknown';
 }
 
-=======
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
 /** ---- Handler ---- **/
 export const handler: Handler = async (event) => {
   try {
@@ -57,13 +51,11 @@ export const handler: Handler = async (event) => {
     }
 
     const body = JSON.parse(event.body || '{}') as { login?: string; phone?: string };
-<<<<<<< HEAD
     const loginRaw = (body.login || '').trim();
     const userPhone = normalizeTR(body.phone);
     const ip = getClientIp(event);
 
     if (!loginRaw || !userPhone) {
-      // İstersen bunu da loglayabilirsin ama genelde client-side validation yeter.
       return {
         statusCode: 400,
         body: JSON.stringify({
@@ -93,7 +85,6 @@ export const handler: Handler = async (event) => {
     const DAILY_LIMIT = 5;
 
     if (todayCount >= DAILY_LIMIT) {
-      // Log'a blok kaydı düş
       await pool.query(
         `
         insert into verification_logs (username, phone, ip, result)
@@ -116,18 +107,6 @@ export const handler: Handler = async (event) => {
 
     // 2.1) GetClients → Id bul
     const getClientsPayload = {
-=======
-    const login = (body.login || '').trim();
-    const userPhone = normalizeTR(body.phone);
-
-    if (!login || !userPhone) {
-      return { statusCode: 400, body: JSON.stringify({ status: 'error', message: 'Geçerli login ve telefon (90XXXXXXXXXX) gerekli.' }) };
-    }
-
-    // 1) GetClients → Id bul
-    const getClientsPayload = {
-      // Minimal payload: senin paylaştığın şemaya sadık kalarak pratik alanlar
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
       Login: login,
       SkeepRows: 0,
       MaxRows: 20,
@@ -137,7 +116,6 @@ export const handler: Handler = async (event) => {
       MaxCreatedLocalDisable: true,
       MinCreatedLocalDisable: true,
 
-      // İsteğe bağlı alanlar boş bırakılabilir
       Id: '', FirstName: '', LastName: '', PersonalId: '', Email: '', Phone: '', ZipCode: null,
       MiddleName: '', MobilePhone: '', NickName: '', DocumentNumber: '', Time: '', TimeZone: '',
       Gender: null, City: '', RegionId: null, Status: null, IsLocked: null, IsVerified: null, IsTest: null,
@@ -149,11 +127,7 @@ export const handler: Handler = async (event) => {
       MinVerificationDateLocal: null, MaxVerificationDateLocal: null, MinFirstDepositDateLocal: null, MaxFirstDepositDateLocal: null,
       CasinoProfileId: null, SportProfitnessFrom: null, SportProfitnessTo: null, CasinoProfitnessFrom: null, CasinoProfitnessTo: null,
       BetShopGroupId: '', CashDeskId: null, IBAN: null, AffiliatePlayerType: null, BTag: null, PartnerClientCategoryId: null,
-<<<<<<< HEAD
       OrderedItem: 1
-=======
-      OrderedItem: 1 // tekrar koymak sorun değil; bazı API'ler buna bakıyor
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
     };
 
     const commonHeaders = {
@@ -169,8 +143,6 @@ export const handler: Handler = async (event) => {
 
     const gcText = await gcRes.text();
     if (!gcRes.ok) {
-<<<<<<< HEAD
-      // Hata da sonuçta sorgu → istersen 'error' diye loglayabiliriz
       await pool.query(
         `
         insert into verification_logs (username, phone, ip, result)
@@ -187,14 +159,10 @@ export const handler: Handler = async (event) => {
         }),
         headers: { 'Content-Type': 'application/json' }
       };
-=======
-      return { statusCode: gcRes.status, body: JSON.stringify({ status: 'error', message: `GetClients HTTP ${gcRes.status}: ${gcText.slice(0, 300)}` }) };
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
     }
 
     let gcJson: GetClientsResp;
     try { gcJson = JSON.parse(gcText); } catch {
-<<<<<<< HEAD
       await pool.query(
         `
         insert into verification_logs (username, phone, ip, result)
@@ -226,17 +194,10 @@ export const handler: Handler = async (event) => {
         }),
         headers: { 'Content-Type': 'application/json' }
       };
-=======
-      return { statusCode: 502, body: JSON.stringify({ status: 'error', message: 'GetClients JSON parse error' }) };
-    }
-    if (gcJson.HasError) {
-      return { statusCode: 502, body: JSON.stringify({ status: 'error', message: gcJson.AlertMessage || 'GetClients returned HasError' }) };
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
     }
 
     const count = gcJson.Data?.Count ?? 0;
     const objs  = gcJson.Data?.Objects ?? [];
-<<<<<<< HEAD
 
     if (count === 0 || objs.length === 0) {
       await pool.query(
@@ -274,22 +235,11 @@ export const handler: Handler = async (event) => {
         }),
         headers: { 'Content-Type': 'application/json' }
       };
-=======
-    if (count === 0 || objs.length === 0) {
-      return { statusCode: 200, body: JSON.stringify({ status: 'not_found', message: 'Bu kullanıcı adına ait hesap bulunamadı.' }) };
-    }
-    if (count > 1 || objs.length > 1) {
-      return { statusCode: 200, body: JSON.stringify({ status: 'ambiguous', message: 'Birden fazla kayıt bulundu, lütfen kullanıcı adını netleştirin.' }) };
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
     }
 
     const id = objs[0].Id;
 
-<<<<<<< HEAD
     // 2.2) GetClientById → Telefon al
-=======
-    // 2) GetClientById → Telefon al
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
     const byIdRes = await fetch(`${API_BASE}/Client/GetClientById?id=${encodeURIComponent(id)}`, {
       method: 'GET',
       headers: commonHeaders,
@@ -297,7 +247,6 @@ export const handler: Handler = async (event) => {
 
     const byIdText = await byIdRes.text();
     if (!byIdRes.ok) {
-<<<<<<< HEAD
       await pool.query(
         `
         insert into verification_logs (username, phone, ip, result)
@@ -314,14 +263,10 @@ export const handler: Handler = async (event) => {
         }),
         headers: { 'Content-Type': 'application/json' }
       };
-=======
-      return { statusCode: byIdRes.status, body: JSON.stringify({ status: 'error', message: `GetClientById HTTP ${byIdRes.status}: ${byIdText.slice(0, 300)}` }) };
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
     }
 
     let byIdJson: GetClientByIdResp;
     try { byIdJson = JSON.parse(byIdText); } catch {
-<<<<<<< HEAD
       await pool.query(
         `
         insert into verification_logs (username, phone, ip, result)
@@ -353,17 +298,10 @@ export const handler: Handler = async (event) => {
         }),
         headers: { 'Content-Type': 'application/json' }
       };
-=======
-      return { statusCode: 502, body: JSON.stringify({ status: 'error', message: 'GetClientById JSON parse error' }) };
-    }
-    if (byIdJson.HasError) {
-      return { statusCode: 502, body: JSON.stringify({ status: 'error', message: byIdJson.AlertMessage || 'GetClientById returned HasError' }) };
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
     }
 
     const serverPhone = normalizeTR(byIdJson.Data?.MobilePhone ?? byIdJson.Data?.Phone ?? null);
     if (!serverPhone) {
-<<<<<<< HEAD
       await pool.query(
         `
         insert into verification_logs (username, phone, ip, result)
@@ -385,7 +323,6 @@ export const handler: Handler = async (event) => {
     const match = serverPhone === userPhone;
     const logResult = match ? 'match' : 'no_match';
 
-    // Son sonucu logla
     await pool.query(
       `
       insert into verification_logs (username, phone, ip, result)
@@ -393,12 +330,6 @@ export const handler: Handler = async (event) => {
     `,
       [login, userPhone, ip, logResult]
     );
-=======
-      return { statusCode: 200, body: JSON.stringify({ status: 'mismatch', message: 'Telefon bilgisi bulunamadı veya geçersiz.' }) };
-    }
-
-    const match = serverPhone === userPhone;
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
 
     return {
       statusCode: 200,
@@ -410,7 +341,6 @@ export const handler: Handler = async (event) => {
     };
 
   } catch (err: any) {
-<<<<<<< HEAD
     console.error('membership-check error:', err);
 
     return {
@@ -423,8 +353,3 @@ export const handler: Handler = async (event) => {
     };
   }
 };
-=======
-    return { statusCode: 500, body: JSON.stringify({ status: 'error', message: err?.message || 'Unexpected error' }) };
-  }
-};
->>>>>>> ade84275cc40b34e0e0c0353ab111957068cd451
