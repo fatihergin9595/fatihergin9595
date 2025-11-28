@@ -1,16 +1,16 @@
 // netlify/functions/membership-check.ts
-import type { Handler } from '@netlify/functions';
-import { pool } from '../../lib/db';
+import type { Handler, HandlerEvent } from "@netlify/functions";
+import { pool } from "../../lib/db";
 
 /** ---- Yardımcılar ---- **/
 
 // TR'ye sabit normalizasyon: Sonuç "90XXXXXXXXXX" (12 hane)
 function normalizeTR(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  const digits = String(raw).replace(/\D/g, '');
-  if (digits.length === 12 && digits.startsWith('90')) return digits;          // 90XXXXXXXXXX
-  if (digits.length === 11 && digits.startsWith('0')) return '90' + digits.slice(1); // 0XXXXXXXXXX
-  if (digits.length === 10 && digits.startsWith('5')) return '90' + digits;    // 5XXXXXXXXX
+  const digits = String(raw).replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("90")) return digits; // 90XXXXXXXXXX
+  if (digits.length === 11 && digits.startsWith("0")) return "90" + digits.slice(1); // 0XXXXXXXXXX
+  if (digits.length === 10 && digits.startsWith("5")) return "90" + digits; // 5XXXXXXXXX
   return null; // geçersiz
 }
 
@@ -22,36 +22,53 @@ type GetClientsResp = {
 
 type GetClientByIdResp = {
   HasError: boolean;
-  Data?: { Id: number; Phone: string | null; MobilePhone: string | null; Status?: number; IsLocked?: boolean };
+  Data?: {
+    Id: number;
+    Phone: string | null;
+    MobilePhone: string | null;
+    Status?: number;
+    IsLocked?: boolean;
+  };
   AlertMessage?: string;
 };
 
-const API_BASE = process.env.API_BASE ?? 'https://backofficewebadmin.betconstruct.com/api/en';
-const API_KEY  = process.env.API_KEY;
+const API_BASE =
+  process.env.API_BASE ?? "https://backofficewebadmin.betconstruct.com/api/en";
+const API_KEY = process.env.API_KEY;
 
 /** ---- IP alma helper'ı (Netlify özel) ---- **/
-function getClientIp(event: Parameters<Handler>[0]): string {
+function getClientIp(event: HandlerEvent): string {
   const headers = event.headers || {};
 
-  const netlifyIp = headers['x-nf-client-connection-ip'];
-  const xff = headers['x-forwarded-for'];
-  const clientIp = netlifyIp || (xff ? xff.split(',')[0].trim() : '') || headers['client-ip'];
+  const netlifyIp = headers["x-nf-client-connection-ip"];
+  const xff = headers["x-forwarded-for"];
+  const clientIp =
+    netlifyIp || (xff ? xff.split(",")[0].trim() : "") || headers["client-ip"];
 
-  return clientIp || 'unknown';
+  return clientIp || "unknown";
 }
 
 /** ---- Handler ---- **/
 export const handler: Handler = async (event) => {
   try {
-    if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Method Not Allowed' };
+    if (event.httpMethod !== "POST") {
+      return { statusCode: 405, body: "Method Not Allowed" };
     }
     if (!API_KEY) {
-      return { statusCode: 500, body: 'Server misconfig: API_KEY missing' };
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          status: "error",
+          message: "Server misconfig: API_KEY missing",
+        }),
+      };
     }
 
-    const body = JSON.parse(event.body || '{}') as { login?: string; phone?: string };
-    const loginRaw = (body.login || '').trim();
+    const body = JSON.parse(event.body || "{}") as {
+      login?: string;
+      phone?: string;
+    };
+    const loginRaw = (body.login || "").trim();
     const userPhone = normalizeTR(body.phone);
     const ip = getClientIp(event);
 
@@ -59,10 +76,10 @@ export const handler: Handler = async (event) => {
       return {
         statusCode: 400,
         body: JSON.stringify({
-          status: 'error',
-          message: 'Geçerli login ve telefon (90XXXXXXXXXX) gerekli.'
+          status: "error",
+          message: "Geçerli login ve telefon (90XXXXXXXXXX) gerekli.",
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       };
     }
 
@@ -90,16 +107,16 @@ export const handler: Handler = async (event) => {
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'blocked_limit']
+        [login, userPhone, ip, "blocked_limit"]
       );
 
       return {
         statusCode: 429,
         body: JSON.stringify({
-          status: 'rate_limit',
-          message: 'Bu IP adresi için günlük sorgu limitiniz dolmuştur.'
+          status: "rate_limit",
+          message: "Bu IP adresi için günlük sorgu limitiniz dolmuştur.",
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       };
     }
 
@@ -116,27 +133,71 @@ export const handler: Handler = async (event) => {
       MaxCreatedLocalDisable: true,
       MinCreatedLocalDisable: true,
 
-      Id: '', FirstName: '', LastName: '', PersonalId: '', Email: '', Phone: '', ZipCode: null,
-      MiddleName: '', MobilePhone: '', NickName: '', DocumentNumber: '', Time: '', TimeZone: '',
-      Gender: null, City: '', RegionId: null, Status: null, IsLocked: null, IsVerified: null, IsTest: null,
-      CurrencyId: null, OwnerId: null, ExternalId: '', RegistrationSource: null, ClientCategory: null,
-      IsEmailSubscribed: null, IsSMSSubscribed: null, SelectedPepStatuses: '', AMLRisk: '',
-      MinCreatedLocal: null, MaxCreatedLocal: null, MinLastTimeLoginDateLocal: null, MaxLastTimeLoginDateLocal: null,
-      MinLastWrongLoginDateLocal: null, MaxLastWrongLoginDateLocal: null, MaxWrongLoginAttempts: null, MinWrongLoginAttempts: null,
-      MinBalance: null, MaxBalance: null, MinLoyaltyPointBalance: null, MaxLoyaltyPointBalance: null,
-      MinVerificationDateLocal: null, MaxVerificationDateLocal: null, MinFirstDepositDateLocal: null, MaxFirstDepositDateLocal: null,
-      CasinoProfileId: null, SportProfitnessFrom: null, SportProfitnessTo: null, CasinoProfitnessFrom: null, CasinoProfitnessTo: null,
-      BetShopGroupId: '', CashDeskId: null, IBAN: null, AffiliatePlayerType: null, BTag: null, PartnerClientCategoryId: null,
-      OrderedItem: 1
+      Id: "",
+      FirstName: "",
+      LastName: "",
+      PersonalId: "",
+      Email: "",
+      Phone: "",
+      ZipCode: null,
+      MiddleName: "",
+      MobilePhone: "",
+      NickName: "",
+      DocumentNumber: "",
+      Time: "",
+      TimeZone: "",
+      Gender: null,
+      City: "",
+      RegionId: null,
+      Status: null,
+      IsLocked: null,
+      IsVerified: null,
+      IsTest: null,
+      CurrencyId: null,
+      OwnerId: null,
+      ExternalId: "",
+      RegistrationSource: null,
+      ClientCategory: null,
+      IsEmailSubscribed: null,
+      IsSMSSubscribed: null,
+      SelectedPepStatuses: "",
+      AMLRisk: "",
+      MinCreatedLocal: null,
+      MaxCreatedLocal: null,
+      MinLastTimeLoginDateLocal: null,
+      MaxLastTimeLoginDateLocal: null,
+      MinLastWrongLoginDateLocal: null,
+      MaxLastWrongLoginDateLocal: null,
+      MaxWrongLoginAttempts: null,
+      MinWrongLoginAttempts: null,
+      MinBalance: null,
+      MaxBalance: null,
+      MinLoyaltyPointBalance: null,
+      MaxLoyaltyPointBalance: null,
+      MinVerificationDateLocal: null,
+      MaxVerificationDateLocal: null,
+      MinFirstDepositDateLocal: null,
+      MaxFirstDepositDateLocal: null,
+      CasinoProfileId: null,
+      SportProfitnessFrom: null,
+      SportProfitnessTo: null,
+      CasinoProfitnessFrom: null,
+      CasinoProfitnessTo: null,
+      BetShopGroupId: "",
+      CashDeskId: null,
+      IBAN: null,
+      AffiliatePlayerType: null,
+      BTag: null,
+      PartnerClientCategoryId: null,
     };
 
-    const commonHeaders = {
-      'Content-Type': 'application/json',
-      'Authentication': API_KEY
-    } as Record<string, string>;
+    const commonHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authentication: API_KEY,
+    };
 
     const gcRes = await fetch(`${API_BASE}/Client/GetClients`, {
-      method: 'POST',
+      method: "POST",
       headers: commonHeaders,
       body: JSON.stringify(getClientsPayload),
     });
@@ -148,33 +209,38 @@ export const handler: Handler = async (event) => {
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'error_getclients']
+        [login, userPhone, ip, "error_getclients"]
       );
 
       return {
         statusCode: gcRes.status,
         body: JSON.stringify({
-          status: 'error',
-          message: `GetClients HTTP ${gcRes.status}: ${gcText.slice(0, 300)}`
+          status: "error",
+          message: `GetClients HTTP ${gcRes.status}: ${gcText.slice(0, 300)}`,
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       };
     }
 
     let gcJson: GetClientsResp;
-    try { gcJson = JSON.parse(gcText); } catch {
+    try {
+      gcJson = JSON.parse(gcText) as GetClientsResp;
+    } catch {
       await pool.query(
         `
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'error_getclients_json']
+        [login, userPhone, ip, "error_getclients_json"]
       );
 
       return {
         statusCode: 502,
-        body: JSON.stringify({ status: 'error', message: 'GetClients JSON parse error' }),
-        headers: { 'Content-Type': 'application/json' }
+        body: JSON.stringify({
+          status: "error",
+          message: "GetClients JSON parse error",
+        }),
+        headers: { "Content-Type": "application/json" },
       };
     }
     if (gcJson.HasError) {
@@ -183,21 +249,21 @@ export const handler: Handler = async (event) => {
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'error_getclients_haserror']
+        [login, userPhone, ip, "error_getclients_haserror"]
       );
 
       return {
         statusCode: 502,
         body: JSON.stringify({
-          status: 'error',
-          message: gcJson.AlertMessage || 'GetClients returned HasError'
+          status: "error",
+          message: gcJson.AlertMessage || "GetClients returned HasError",
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       };
     }
 
     const count = gcJson.Data?.Count ?? 0;
-    const objs  = gcJson.Data?.Objects ?? [];
+    const objs = gcJson.Data?.Objects ?? [];
 
     if (count === 0 || objs.length === 0) {
       await pool.query(
@@ -205,16 +271,16 @@ export const handler: Handler = async (event) => {
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'no_match']
+        [login, userPhone, ip, "no_match"]
       );
 
       return {
         statusCode: 200,
         body: JSON.stringify({
-          status: 'not_found',
-          message: 'Bu kullanıcı adına ait hesap bulunamadı.'
+          status: "not_found",
+          message: "Bu kullanıcı adına ait hesap bulunamadı.",
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       };
     }
 
@@ -224,26 +290,30 @@ export const handler: Handler = async (event) => {
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'no_match']
+        [login, userPhone, ip, "no_match"]
       );
 
       return {
         statusCode: 200,
         body: JSON.stringify({
-          status: 'ambiguous',
-          message: 'Birden fazla kayıt bulundu, lütfen kullanıcı adını netleştirin.'
+          status: "ambiguous",
+          message:
+            "Birden fazla kayıt bulundu, lütfen kullanıcı adını netleştirin.",
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       };
     }
 
     const id = objs[0].Id;
 
     // 2.2) GetClientById → Telefon al
-    const byIdRes = await fetch(`${API_BASE}/Client/GetClientById?id=${encodeURIComponent(id)}`, {
-      method: 'GET',
-      headers: commonHeaders,
-    });
+    const byIdRes = await fetch(
+      `${API_BASE}/Client/GetClientById?id=${encodeURIComponent(id)}`,
+      {
+        method: "GET",
+        headers: commonHeaders,
+      }
+    );
 
     const byIdText = await byIdRes.text();
     if (!byIdRes.ok) {
@@ -252,33 +322,41 @@ export const handler: Handler = async (event) => {
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'error_getclientbyid']
+        [login, userPhone, ip, "error_getclientbyid"]
       );
 
       return {
         statusCode: byIdRes.status,
         body: JSON.stringify({
-          status: 'error',
-          message: `GetClientById HTTP ${byIdRes.status}: ${byIdText.slice(0, 300)}`
+          status: "error",
+          message: `GetClientById HTTP ${byIdRes.status}: ${byIdText.slice(
+            0,
+            300
+          )}`,
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       };
     }
 
     let byIdJson: GetClientByIdResp;
-    try { byIdJson = JSON.parse(byIdText); } catch {
+    try {
+      byIdJson = JSON.parse(byIdText) as GetClientByIdResp;
+    } catch {
       await pool.query(
         `
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'error_getclientbyid_json']
+        [login, userPhone, ip, "error_getclientbyid_json"]
       );
 
       return {
         statusCode: 502,
-        body: JSON.stringify({ status: 'error', message: 'GetClientById JSON parse error' }),
-        headers: { 'Content-Type': 'application/json' }
+        body: JSON.stringify({
+          status: "error",
+          message: "GetClientById JSON parse error",
+        }),
+        headers: { "Content-Type": "application/json" },
       };
     }
     if (byIdJson.HasError) {
@@ -287,41 +365,44 @@ export const handler: Handler = async (event) => {
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'error_getclientbyid_haserror']
+        [login, userPhone, ip, "error_getclientbyid_haserror"]
       );
 
       return {
         statusCode: 502,
         body: JSON.stringify({
-          status: 'error',
-          message: byIdJson.AlertMessage || 'GetClientById returned HasError'
+          status: "error",
+          message:
+            byIdJson.AlertMessage || "GetClientById returned HasError",
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       };
     }
 
-    const serverPhone = normalizeTR(byIdJson.Data?.MobilePhone ?? byIdJson.Data?.Phone ?? null);
+    const serverPhone = normalizeTR(
+      byIdJson.Data?.MobilePhone ?? byIdJson.Data?.Phone ?? null
+    );
     if (!serverPhone) {
       await pool.query(
         `
         insert into verification_logs (username, phone, ip, result)
         values ($1, $2, $3, $4)
       `,
-        [login, userPhone, ip, 'no_match']
+        [login, userPhone, ip, "no_match"]
       );
 
       return {
         statusCode: 200,
         body: JSON.stringify({
-          status: 'mismatch',
-          message: 'Telefon bilgisi bulunamadı veya geçersiz.'
+          status: "mismatch",
+          message: "Telefon bilgisi bulunamadı veya geçersiz.",
         }),
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" },
       };
     }
 
     const match = serverPhone === userPhone;
-    const logResult = match ? 'match' : 'no_match';
+    const logResult = match ? "match" : "no_match";
 
     await pool.query(
       `
@@ -334,22 +415,23 @@ export const handler: Handler = async (event) => {
     return {
       statusCode: 200,
       body: JSON.stringify({
-        status: match ? 'match' : 'mismatch',
-        message: match ? 'Eşleşme bulundu.' : 'Kullanıcı adı ile telefon numarası eşleşmedi.'
+        status: match ? "match" : "mismatch",
+        message: match
+          ? "Eşleşme bulundu."
+          : "Kullanıcı adı ile telefon numarası eşleşmedi.",
       }),
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" },
     };
-
   } catch (err: any) {
-    console.error('membership-check error:', err);
+    console.error("membership-check error:", err);
 
     return {
       statusCode: 500,
       body: JSON.stringify({
-        status: 'error',
-        message: err?.message || 'Unexpected error'
+        status: "error",
+        message: "Şu anda teknik bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
       }),
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" },
     };
   }
 };
