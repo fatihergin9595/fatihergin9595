@@ -32,7 +32,7 @@ type GetClientByIdResp = {
   AlertMessage?: string;
 };
 
-const API_BASE = "https://backofficewebadmin.betconstruct.com/api/en";
+const BETCO_API_BASE = "https://backofficewebadmin.betconstruct.com/api/en";
 const API_KEY = process.env.API_KEY;
 
 /** ---- IP alma helper'ı (Netlify özel) ---- **/
@@ -195,7 +195,7 @@ export const handler: Handler = async (event) => {
       Authentication: API_KEY,
     };
 
-    const gcRes = await fetch(`${API_BASE}/Client/GetClients`, {
+    const gcRes = await fetch(`${BETCO_API_BASE}/Client/GetClients`, {
       method: "POST",
       headers: commonHeaders,
       body: JSON.stringify(getClientsPayload),
@@ -307,7 +307,7 @@ export const handler: Handler = async (event) => {
 
     // 2.2) GetClientById → Telefon al
     const byIdRes = await fetch(
-      `${API_BASE}/Client/GetClientById?id=${encodeURIComponent(id)}`,
+      `${BETCO_API_BASE}/Client/GetClientById?id=${encodeURIComponent(id)}`,
       {
         method: "GET",
         headers: commonHeaders,
