@@ -298,7 +298,7 @@ const StepsPanel: React.FC = () => {
               style={{ backgroundColor: '#1475E1', color: '#ffffff', borderRadius: '8px' }}
               className="flex items-center justify-center gap-2 px-6 py-3 font-bold hover:bg-blue-600 hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
             >
-              📞 Aranma Talep Et
+              📞  Aranma Talep Et
             </a>
             <a
               href="https://t.ly/golgiris"
