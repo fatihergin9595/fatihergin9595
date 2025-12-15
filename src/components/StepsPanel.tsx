@@ -4,9 +4,6 @@ import {
   MessageSquare, ExternalLink, Smartphone, Globe, RefreshCw
 } from 'lucide-react';
 
-// 👇 EKRAN GÖRÜNTÜSÜ IMPORT
-import koduAlScreenshot from '../assets/kodu-al-butonu.png';
-
 interface TroubleshootingStep {
   id: string;
   title: string;
@@ -33,7 +30,7 @@ const StepsPanel: React.FC = () => {
       icon: <PhoneIcon className="w-5 h-5" />,
       explanation: 'Kodu almak için mutlaka bu butona basmanız gerekir.',
       instructions: ['"Kodu Al" butonuna bastığınızdan emin olun', 'Sayfayı yenileyip tekrar deneyin'],
-      explanationImage: koduAlScreenshot, // 👈 Ekran görüntüsü buraya bağlı
+      explanationImage: "/assets/kodual-butonu.jpg", // 👈 Ekran görüntüsü eklendi
       isExpanded: false, isCompleted: false, isSolved: null
     },
     {
