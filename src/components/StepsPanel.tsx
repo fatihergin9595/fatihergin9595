@@ -292,13 +292,13 @@ const StepsPanel: React.FC = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
-              href="https://www.goldestek.com/"
+              href="https://t.ly/golaranmatalep"
               target="_blank"
               rel="noopener noreferrer"
               style={{ backgroundColor: '#1475E1', color: '#ffffff', borderRadius: '8px' }}
               className="flex items-center justify-center gap-2 px-6 py-3 font-bold hover:bg-blue-600 hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
             >
-              ✉️ Golbet Destek
+              📞 Aranma Talep Et
             </a>
             <a
               href="https://t.ly/golgiris"
@@ -308,7 +308,7 @@ const StepsPanel: React.FC = () => {
               className="flex items-center justify-center gap-2 px-6 py-3 font-bold hover:bg-gray-100 hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
             >
               <MessageSquare className="w-5 h-5" />
-              💬 Canlı Destek
+              Canlı Destek
               <ExternalLink className="w-4 h-4" />
             </a>
           </div>
