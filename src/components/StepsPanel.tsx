@@ -4,6 +4,8 @@ import {
   MessageSquare, ExternalLink, Smartphone, Globe, RefreshCw
 } from 'lucide-react';
 
+import koduAlScreenshot from '../assets/kodual-butonu.jpg';
+
 interface TroubleshootingStep {
   id: string;
   title: string;
@@ -30,7 +32,7 @@ const StepsPanel: React.FC = () => {
       icon: <PhoneIcon className="w-5 h-5" />,
       explanation: 'Kodu almak için mutlaka bu butona basmanız gerekir.',
       instructions: ['"Kodu Al" butonuna bastığınızdan emin olun', 'Sayfayı yenileyip tekrar deneyin'],
-      explanationImage: "/assets/kodual-butonu.jpg", // 👈 Ekran görüntüsü eklendi
+      explanationImage: koduAlScreenshot, // 👈 import ettiğimiz değişken
       isExpanded: false, isCompleted: false, isSolved: null
     },
     {
@@ -139,21 +141,21 @@ const StepsPanel: React.FC = () => {
           {step.isExpanded && (
             <div className="mt-4 pl-4 sm:pl-8 space-y-4">
               {/* AÇIKLAMA + GÖRSEL */}
-              <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg space-y-3">
-                <p className="text-blue-100 text-sm sm:text-base">
-                  {step.explanation}
-                </p>
+  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg space-y-3">
+  <p className="text-blue-100 text-sm sm:text-base">
+    {step.explanation}
+  </p>
 
-                {step.explanationImage && (
-                  <div className="border border-blue-500/30 rounded-md overflow-hidden bg-black/40">
-                    <img
-                      src={step.explanationImage}
-                      alt={step.title}
-                      className="w-full max-w-md mx-auto block"
-                    />
-                  </div>
-                )}
-              </div>
+  {step.explanationImage && (
+    <div className="border border-blue-500/30 rounded-md overflow-hidden bg-black/40">
+      <img
+        src={step.explanationImage}
+        alt={step.title}
+        className="w-full max-w-md mx-auto block"
+      />
+    </div>
+  )}
+</div>
 
               {step.id === 'operator' && (
                 <div>
