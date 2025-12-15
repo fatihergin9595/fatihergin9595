@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Mail, User, Phone as PhoneIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import StepsPanel from './StepsPanel';
+import smsLogo from '../assets/SMS.png';
 
 /* -------- Helpers (regex literal yok) -------- */
 const onlyDigits = (v: string) => v.replace(new RegExp('\\D', 'g'), '');
@@ -87,7 +88,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
         <div className="max-w-3xl mx-auto">
           <div className="mb-8">
             <img
-              src="src/assets/SMS.png"
+              src={smsLogo}
               alt="Logo"
               className="w-full max-w-md mx-auto block"
               style={{ maxHeight: '120px', objectFit: 'contain' }}
@@ -116,7 +117,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <img
-            src="src/assets/SMS.png"
+            src={smsLogo}
             alt="Logo"
             className="w-full max-w-md mx-auto block"
             style={{ maxHeight: '120px', objectFit: 'contain' }}
