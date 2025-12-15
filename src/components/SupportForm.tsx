@@ -87,7 +87,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
         <div className="max-w-3xl mx-auto">
           <div className="mb-8">
             <img
-              src="/assets/SMS.png"
+              src="src/assets/SMS.png"
               alt="Logo"
               className="w-full max-w-md mx-auto block"
               style={{ maxHeight: '120px', objectFit: 'contain' }}
@@ -116,7 +116,7 @@ export default function SupportForm({ onBack }: SupportFormProps) {
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <img
-            src="/assets/SMS.png"
+            src="src/assets/SMS.png"
             alt="Logo"
             className="w-full max-w-md mx-auto block"
             style={{ maxHeight: '120px', objectFit: 'contain' }}
