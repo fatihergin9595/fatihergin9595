@@ -130,7 +130,6 @@ export default function SupportForm({ onBack }: SupportFormProps) {
 
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-4">Golbet SMS Destek Formu</h1>
-          <p className="text-gray-300 text-sm sm:text-base">SMS doğrulama ile ilgili sorunlarınız için destek talebinde bulunun.</p>
         </div>
 
         <div style={{ backgroundColor: '#0a2332', borderRadius: '10px', padding: '24px' }} className="mb-8">
